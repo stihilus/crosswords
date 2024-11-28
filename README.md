@@ -1,9 +1,11 @@
 # Crossword
 
+<img width="915" alt="image" src="https://github.com/user-attachments/assets/4d0e25b1-e933-4792-83ab-73e1841f0a1c">
+
 An interactive musical grid where objects interact with bullets to create rhythmic patterns and melodies. Create, play, and share your musical compositions.
 
 ## Live Demo
-[https://crossword.lomz.net](https://crossword.lomz.net)
+https://stihilus.github.io/crosswords/
 
 ## Objects
 
