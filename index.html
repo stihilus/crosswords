@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary Meta Tags -->
+    <title>Crossword</title>
+    <meta name="title" content="Crossword">
+    <meta name="description" content="An interactive musical grid where objects interact with bullets to create rhythmic patterns and melodies. Create, play, and share your musical compositions.">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://crossword.lomz.net/">
+    <meta property="og:title" content="Crossword">
+    <meta property="og:description" content="An interactive musical grid where objects interact with bullets to create rhythmic patterns and melodies. Create, play, and share your musical compositions.">
+    <meta property="og:image" content="https://i.ibb.co/qNhhCyD/shareImage.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://crossword.lomz.net/">
+    <meta property="twitter:title" content="Crossword">
+    <meta property="twitter:description" content="An interactive musical grid where objects interact with bullets to create rhythmic patterns and melodies. Create, play, and share your musical compositions.">
+    <meta property="twitter:image" content="https://i.ibb.co/qNhhCyD/shareImage.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- Existing stylesheets -->
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+</head>
+<body>
+    <div id="grid"></div>
+    <div class="controls">
+        <div id="play-button" class="control-button">
+            <img src="play.svg" alt="Play" width="24" height="24" id="control-icon">
+        </div>
+        <div id="info-button">
+            <img src="info.svg" alt="Info" width="24" height="24">
+        </div>
+        <div id="open-button">
+            <img src="open.svg" alt="Open" width="24" height="24">
+        </div>
+    </div>
+    <div class="credit">
+        made by <a href="https://www.lomz.net" target="_blank">lomz.net</a>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Objects Guide</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="object-card">
+                    <h3>Basic Controls</h3>
+                    <p>1. Left click cell to select it</p>
+                    <p>2. Press letter key to place object</p>
+                    <p>3. Right click to remove object</p>
+                    <p>4. Click top corners to change object settings</p>
+                </div>
+                <div class="object-card">
+                    <h3>T - Trigger</h3>
+                    <p>Shoots bullets in specified direction</p>
+                    <div class="options">
+                        <div class="top-left">
+                            Speed: 
+                            <br>ss - very slow (16 beats)
+                            <br>s - slow (8 beats)
+                            <br>n - normal (4 beats)
+                            <br>f - fast (2 beats)
+                            <br>ff - very fast (1 beat)
+                        </div>
+                        <div class="top-right">
+                            Direction: 
+                            <br>n - north
+                            <br>e - east
+                            <br>s - south
+                            <br>w - west
+                        </div>
+                    </div>
+                </div>
+                <div class="object-card">
+                    <h3>M - Melody</h3>
+                    <p>Plays musical note when hit by bullet</p>
+                    <div class="options">
+                        <div class="top-left">
+                            Wave type: 
+                            <br>si - sine (pure tone)
+                            <br>sq - square (harsh)
+                            <br>tr - triangle (soft)
+                            <br>st - sawtooth (buzzy)
+                        </div>
+                        <div class="top-right">
+                            Notes: C4 to B5
+                            <br>C4, D4, E4, F4, G4, A4, B4
+                            <br>C5, D5, E5, F5, G5, A5, B5
+                        </div>
+                    </div>
+                </div>
+                <div class="object-card">
+                    <h3>N - Noise</h3>
+                    <p>Plays drum sound when hit by bullet</p>
+                    <div class="options">
+                        <div class="top-left">
+                            Drum type:
+                            <br>kd - kick drum
+                            <br>sn - snare
+                            <br>hh - hi-hat
+                            <br>tm - tom
+                        </div>
+                    </div>
+                </div>
+                <div class="object-card">
+                    <h3>D - Deflector</h3>
+                    <p>Changes bullet direction</p>
+                    <div class="options">
+                        <div class="top-right">
+                            Direction:
+                            <br>n - north (up)
+                            <br>e - east (right)
+                            <br>s - south (down)
+                            <br>w - west (left)
+                        </div>
+                    </div>
+                </div>
+                <div class="object-card">
+                    <h3>G - Gate</h3>
+                    <p>Controls bullet passage</p>
+                    <div class="options">
+                        <div class="top-left">
+                            Mode:
+                            <br>1 - let every bullet pass
+                            <br>2 - let every 2nd bullet pass
+                            <br>3 - let every 3rd bullet pass
+                            <br>4 - let every 4th bullet pass
+                            <br>r - random (50% chance)
+                        </div>
+                    </div>
+                </div>
+                <div class="object-card">
+                    <h3>S - Sample</h3>
+                    <p>Plays audio sample when hit by bullet</p>
+                    <div class="options">
+                        <div class="top-left">
+                            Sample: 01/02/03
+                        </div>
+                    </div>
+                </div>
+                <div class="object-card">
+                    <h3>X - Splitter</h3>
+                    <p>Creates additional bullets perpendicular to incoming bullet direction</p>
+                    <div class="options">
+                        <div class="top-left">
+                            When hit horizontally: creates N and S bullets
+                            <br>When hit vertically: creates E and W bullets
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="examples-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Examples</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="example-card" data-grid="048Tne-050Gr-055Ds-093Tne-096Nkd-100·-101S02-104·-123Tne-126·-127Nkd-130S03-134·-153Tfe-156·-158Nsn-159Gr-160Nkd-162S01-183Tfe-186MsiA4-187Gr-188·-189Gr-190MsiF4-192·-194·-198Tne-201Nhh-202Nhh-203Nhh-204Nhh-205Nhh-209·">
+                    <h3>Example 1</h3>
+                    <p>Complex rhythm pattern with melodies and drums</p>
+                </div>
+                <div class="example-card" data-grid="024·-034Tfe-037Nkd-039MsiC4-040Gr-041MsiD4-043Ds-073·-079·-083·-084Nhh-085Nhh-087·-088Dw-124Tne-126S02-127·-129Tnn-131·">
+                    <h3>Example 2</h3>
+                    <p>Gate and deflector based sequence</p>
+                </div>
+                <div class="example-card" data-grid="021MstF4-036Gr-051Nkd-078Tfe-080·-081Xx-082·-084Nsn-085Gr-086MsiE4-126Nsn-141·-156Nhh-171Nkd-201·">
+                    <h3>Example 3</h3>
+                    <p>Splitter and multi-sound pattern</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

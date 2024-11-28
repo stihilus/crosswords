@@ -1,0 +1,534 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #EDEAE6;
+    gap: 20px;
+}
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(15, 1fr);
+    gap: 2px;
+    width: fit-content;
+    height: fit-content;
+    background-color: #282727;
+    padding: 2px;
+}
+
+.cell {
+    background-color: #EDEAE6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 24px;
+    line-height: 1;
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+    position: relative;
+    color: #282727;
+}
+
+.cell.selected {
+    background-color: rgba(241, 73, 29, 0.2); /* F1491D with opacity */
+}
+
+.cell[data-tone]::after {
+    content: attr(data-tone);
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 10px;
+    opacity: 0.9;
+    background-color: #F1CA1D;
+    color: #282727;
+    padding: 1px 3px;
+    border-radius: 2px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.cell[data-tone]::after:hover {
+    background-color: rgba(241, 202, 29, 0.8); /* F1CA1D with opacity */
+}
+
+/* Update direction indicators for S cells */
+.cell[data-direction]::after {
+    content: attr(data-direction);
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 10px;
+    opacity: 0.9;
+    background-color: #F1491D;
+    color: #EDEAE6;
+    padding: 1px 3px;
+    border-radius: 2px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Remove old direction dot styles */
+.cell[data-direction="RIGHT"]::before,
+.cell[data-direction="DOWN"]::before,
+.cell[data-direction="LEFT"]::before,
+.cell[data-direction="UP"]::before {
+    content: none;
+}
+
+.cell[data-tone]::before {
+    content: attr(data-oscillator);
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 10px;
+    opacity: 0.9;
+    background-color: #561DF1;
+    color: #EDEAE6;
+    padding: 1px 3px;
+    border-radius: 2px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.cell[data-tone]::before:hover {
+    background-color: rgba(86, 29, 241, 0.8); /* 561DF1 with opacity */
+}
+
+/* Style for S and T characters */
+.cell:has([data-direction]) {
+    color: #F1491D; /* S characters in orange */
+}
+
+.cell[data-tone] {
+    color: #561DF1; /* T characters in purple */
+}
+
+/* Style for bullets */
+.cell:not([data-direction]):not([data-tone]) {
+    color: #282727;
+}
+
+.cell[data-noisetype]::before {
+    content: attr(data-noisetype);
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 10px;
+    opacity: 0.9;
+    background-color: #F1491D;  /* Using orange for noise types */
+    color: #EDEAE6;
+    padding: 1px 3px;
+    border-radius: 2px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.cell[data-noisetype] {
+    color: #F1491D;  /* N characters in orange */
+}
+
+.cell[data-noisetype]::before:hover {
+    background-color: rgba(241, 73, 29, 0.8);
+}
+
+.cell[data-speed]::before {
+    content: attr(data-speed);
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 10px;
+    opacity: 0.9;
+    background-color: #F1491D;
+    color: #EDEAE6;
+    padding: 1px 3px;
+    border-radius: 2px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.cell[data-speed]::before:hover {
+    background-color: rgba(241, 73, 29, 0.8);
+}
+
+/* Add styles for deflector */
+.cell[data-deflect] {
+    color: #F1CA1D; /* Yellow color for deflector */
+}
+
+.cell[data-deflect]::after {
+    content: attr(data-deflect);
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 10px;
+    opacity: 0.9;
+    background-color: #F1CA1D;
+    color: #282727;
+    padding: 1px 3px;
+    border-radius: 2px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Update dot indicator styles */
+.cell[data-deflect]::before {
+    content: none;
+}
+
+/* Add these animation definitions */
+@keyframes hitT {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(86, 29, 241, 0.2); } /* Purple for T */
+    100% { background-color: #EDEAE6; }
+}
+
+@keyframes hitN {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(241, 73, 29, 0.2); } /* Orange for N */
+    100% { background-color: #EDEAE6; }
+}
+
+@keyframes hitD {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(241, 202, 29, 0.2); } /* Yellow for D */
+    100% { background-color: #EDEAE6; }
+}
+
+.hit-t {
+    animation: hitT 0.2s ease-out;
+}
+
+.hit-n {
+    animation: hitN 0.2s ease-out;
+}
+
+.hit-d {
+    animation: hitD 0.2s ease-out;
+}
+
+/* Add styles for gate */
+.cell[data-gate] {
+    color: #561DF1; /* Purple color for gate */
+}
+
+.cell[data-gate]::before {
+    content: attr(data-gate);
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 10px;
+    opacity: 0.9;
+    background-color: #561DF1;
+    color: #EDEAE6;
+    padding: 1px 3px;
+    border-radius: 2px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Add gate hit animation */
+@keyframes hitG {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(86, 29, 241, 0.2); } /* Purple for G */
+    100% { background-color: #EDEAE6; }
+}
+
+.hit-g {
+    animation: hitG 0.2s ease-out;
+}
+
+#info-button {
+    position: static;
+    transform: none;
+    cursor: pointer;
+    padding: 10px;
+    background: #EDEAE6;
+    transition: transform 0.2s;
+}
+
+#info-button:hover {
+    transform: scale(1.1);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+.modal-content {
+    position: relative;
+    background-color: #EDEAE6;
+    margin: 5vh auto;
+    padding: 20px;
+    width: 80%;
+    max-width: 600px;
+    max-height: 80vh;
+    border-radius: 0;
+    box-shadow: none;
+    font-family: 'Space Mono', monospace;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #282727;
+    flex-shrink: 0;
+}
+
+.modal-header h2 {
+    color: #282727;
+    margin: 0;
+}
+
+.close {
+    color: #282727;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #F1491D;
+}
+
+.object-card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.object-card h3 {
+    color: #282727;
+    margin: 0 0 10px 0;
+}
+
+.object-card p {
+    color: #282727;
+    margin: 0 0 10px 0;
+}
+
+.options {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+.top-left {
+    color: #F1491D;
+}
+
+.top-right {
+    color: #561DF1;
+}
+
+.note {
+    font-size: 0.8em;
+    color: #666;
+    font-style: italic;
+    margin-top: 5px;
+}
+
+.modal,
+.modal *,
+.object-card * {
+    border-radius: 0;
+}
+
+.modal-body {
+    overflow-y: auto;
+    padding-right: 10px;
+    flex-grow: 1;
+}
+
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: #EDEAE6;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: #282727;
+}
+
+/* Shooting animation */
+@keyframes shoot {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(241, 73, 29, 0.2); }
+    100% { background-color: #EDEAE6; }
+}
+
+.shooting {
+    animation: shoot 0.2s ease-out;
+}
+
+/* Hit animations for different objects */
+@keyframes hitT {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(86, 29, 241, 0.2); }
+    100% { background-color: #EDEAE6; }
+}
+
+@keyframes hitN {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(241, 73, 29, 0.2); }
+    100% { background-color: #EDEAE6; }
+}
+
+@keyframes hitD {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(241, 202, 29, 0.2); }
+    100% { background-color: #EDEAE6; }
+}
+
+@keyframes hitS {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(241, 202, 29, 0.2); }
+    100% { background-color: #EDEAE6; }
+}
+
+/* Hit classes */
+.hit-t {
+    animation: hitT 0.2s ease-out;
+}
+
+.hit-n {
+    animation: hitN 0.2s ease-out;
+}
+
+.hit-d {
+    animation: hitD 0.2s ease-out;
+}
+
+.hit-s {
+    animation: hitS 0.2s ease-out;
+}
+
+/* Sample object styles */
+.cell[data-sample] {
+    color: #F1CA1D;
+}
+
+.cell[data-sample]::before {
+    content: attr(data-sample);
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 10px;
+    opacity: 0.9;
+    background-color: #F1CA1D;
+    color: #282727;
+    padding: 1px 3px;
+    border-radius: 2px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Update controls styles */
+.controls {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 0;
+}
+
+/* Remove transform from control button */
+.control-button {
+    cursor: pointer;
+    padding: 10px;
+    background: #EDEAE6;
+    transition: transform 0.2s;
+}
+
+/* Keep hover effects */
+.control-button:hover,
+#info-button:hover {
+    transform: scale(1.1);
+}
+
+/* Add styles for splitter */
+.cell[data-splitter] {
+    color: #561DF1;  /* Using purple for splitter */
+}
+
+@keyframes hitX {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: rgba(86, 29, 241, 0.2); }
+    100% { background-color: #EDEAE6; }
+}
+
+.hit-x {
+    animation: hitX 0.2s ease-out;
+}
+
+.credit {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: #282727;
+}
+
+.credit a {
+    color: #F1491D;
+    text-decoration: none;
+}
+
+.credit a:hover {
+    text-decoration: underline;
+}
+
+.example-card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+}
+
+.example-card:hover {
+    background-color: rgba(241, 73, 29, 0.1);
+}
+
+#open-button {
+    cursor: pointer;
+    padding: 10px;
+    background: #EDEAE6;
+    transition: transform 0.2s;
+}
+
+#open-button:hover {
+    transform: scale(1.1);
+}
