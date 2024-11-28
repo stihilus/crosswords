@@ -50,4 +50,14 @@ https://stihilus.github.io/crosswords/
 - [Tone.js](https://tonejs.github.io/) for audio synthesis
 - Google Fonts (Space Mono)
 
-## File Structure 
+## Development
+1. Clone the repository
+2. Add audio samples to the `samples` folder
+3. Open `index.html` in a browser
+4. Start creating!
+
+## License
+MIT
+
+## Author
+[lomz.net](https://www.lomz.net)
