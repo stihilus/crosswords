@@ -532,3 +532,15 @@ body {
 #open-button:hover {
     transform: scale(1.1);
 }
+
+/* Add these styles with the other control button styles */
+#tempo-button {
+    cursor: pointer;
+    padding: 10px;
+    background: #EDEAE6;
+    transition: transform 0.2s;
+}
+
+#tempo-button:hover {
+    transform: scale(1.1);
+}

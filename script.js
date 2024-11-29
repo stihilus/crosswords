@@ -2,8 +2,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('grid');
     const GRID_SIZE = 15;
     let selectedCell = null;
-    const BPM = 120;
-    const MS_PER_BEAT = (60 * 1000) / BPM;
+    const TEMPO_SETTINGS = [
+        { bpm: 100, icon: 'tempo1.svg' },
+        { bpm: 110, icon: 'tempo2.svg' },
+        { bpm: 120, icon: 'tempo3.svg' },
+        { bpm: 130, icon: 'tempo4.svg' },
+        { bpm: 140, icon: 'tempo5.svg' }
+    ];
+    let currentTempoIndex = 0;
+    const BPM = TEMPO_SETTINGS[currentTempoIndex].bpm;
+    let MS_PER_BEAT = (60 * 1000) / BPM;
     let projectiles = [];
     let shooters = [];
     let beatCount = 0;
@@ -777,8 +785,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add these functions to your code
     function encodeGridState() {
         let encodedState = [];
-        const cells = document.querySelectorAll('.cell');
         
+        // Add tempo information at the start
+        encodedState.push(`t${currentTempoIndex}`);
+        
+        const cells = document.querySelectorAll('.cell');
         cells.forEach((cell, index) => {
             if (cell.textContent) {
                 let cellCode = index.toString().padStart(3, '0'); // Changed to 3 digits
@@ -824,6 +835,21 @@ document.addEventListener('DOMContentLoaded', () => {
         projectiles = [];
         
         const cellCodes = encodedState.split('-');
+        
+        // Handle tempo code if present
+        if (cellCodes[0].startsWith('t')) {
+            currentTempoIndex = parseInt(cellCodes[0].slice(1));
+            const newBPM = TEMPO_SETTINGS[currentTempoIndex].bpm;
+            MS_PER_BEAT = (60 * 1000) / newBPM;
+            
+            // Update tempo icon
+            const tempoButton = document.getElementById('tempo-button');
+            tempoButton.querySelector('img').src = TEMPO_SETTINGS[currentTempoIndex].icon;
+            
+            // Remove tempo code from array
+            cellCodes.shift();
+        }
+        
         cellCodes.forEach(code => {
             const position = parseInt(code.slice(0, 3));
             const objectType = code[3];
@@ -957,5 +983,35 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === examplesModal) {
             examplesModal.style.display = 'none';
         }
+    });
+
+    // Add this after other event listeners
+    document.getElementById('tempo-button').addEventListener('click', () => {
+        // Stop current interval
+        if (shootingInterval) {
+            clearInterval(shootingInterval);
+        }
+        
+        // Update tempo index
+        currentTempoIndex = (currentTempoIndex + 1) % TEMPO_SETTINGS.length;
+        
+        // Update tempo-related variables
+        const newBPM = TEMPO_SETTINGS[currentTempoIndex].bpm;
+        MS_PER_BEAT = (60 * 1000) / newBPM;
+        
+        // Update icon
+        const tempoButton = document.getElementById('tempo-button');
+        tempoButton.querySelector('img').src = TEMPO_SETTINGS[currentTempoIndex].icon;
+        
+        // Restart interval if playing
+        if (isPlaying) {
+            shootingInterval = setInterval(() => {
+                updateProjectiles();
+                shootFromShooters();
+            }, MS_PER_BEAT);
+        }
+        
+        // Update URL with new tempo
+        updateURL();
     });
 });
