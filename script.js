@@ -337,11 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createProjectile(shooter) {
-        // Calculate starting position based on direction
-        const startX = parseInt(shooter.x) + shooter.direction.dx;
-        const startY = parseInt(shooter.y) + shooter.direction.dy;
+        // Start projectile from shooter cell so first move hits adjacent cell
+        const startX = parseInt(shooter.x);
+        const startY = parseInt(shooter.y);
         
-        // Only create projectile if starting position is within grid
+        // Only create projectile if shooter itself is within grid
         if (startX >= 0 && startX < GRID_SIZE && 
             startY >= 0 && startY < GRID_SIZE) {
             return {
@@ -477,33 +477,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // If moving horizontally, create vertical bullets
                     if (Math.abs(currentDir.dx) === 1) {
-                        // Create north bullet
+                        // Create north bullet starting from splitter cell
                         newProjectiles.push({
                             x: projectile.x,
-                            y: projectile.y - 1, // Start one cell up
+                            y: projectile.y,
                             direction: DIRECTIONS.n,
                             char: '·'
                         });
-                        // Create south bullet
+                        // Create south bullet starting from splitter cell
                         newProjectiles.push({
                             x: projectile.x,
-                            y: projectile.y + 1, // Start one cell down
+                            y: projectile.y,
                             direction: DIRECTIONS.s,
                             char: '·'
                         });
                     }
                     // If moving vertically, create horizontal bullets
                     else if (Math.abs(currentDir.dy) === 1) {
-                        // Create east bullet
+                        // Create east bullet starting from splitter cell
                         newProjectiles.push({
-                            x: projectile.x + 1, // Start one cell right
+                            x: projectile.x,
                             y: projectile.y,
                             direction: DIRECTIONS.e,
                             char: '·'
                         });
-                        // Create west bullet
+                        // Create west bullet starting from splitter cell
                         newProjectiles.push({
-                            x: projectile.x - 1, // Start one cell left
+                            x: projectile.x,
                             y: projectile.y,
                             direction: DIRECTIONS.w,
                             char: '·'
