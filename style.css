@@ -1,5 +1,5 @@
 :root {
-    --cell-size: min(48px, calc((min(100vw, 100vh) - 120px) / 15));
+    --cell-size: min(48px, calc((min(100vw, 100vh) - 120px) / 8));
 }
 
 * {
@@ -20,7 +20,7 @@ body {
 
 #grid {
     display: grid;
-    grid-template-columns: repeat(15, 1fr);
+    grid-template-columns: repeat(8, 1fr);
     gap: 2px;
     width: fit-content;
     height: fit-content;
