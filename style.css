@@ -1,3 +1,7 @@
+:root {
+    --cell-size: min(48px, calc((min(100vw, 100vh) - 120px) / 15));
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -30,10 +34,10 @@ body {
     justify-content: center;
     align-items: center;
     font-family: 'Space Mono', monospace;
-    font-size: 24px;
+    font-size: calc(var(--cell-size) * 0.5);
     line-height: 1;
-    width: 48px;
-    height: 48px;
+    width: var(--cell-size);
+    height: var(--cell-size);
     cursor: pointer;
     user-select: none;
     transition: background-color 0.2s;
@@ -50,7 +54,7 @@ body {
     position: absolute;
     top: 2px;
     right: 2px;
-    font-size: 10px;
+    font-size: max(8px, calc(var(--cell-size) * 0.21));
     opacity: 0.9;
     background-color: #F1CA1D;
     color: #282727;
@@ -70,7 +74,7 @@ body {
     position: absolute;
     top: 2px;
     right: 2px;
-    font-size: 10px;
+    font-size: max(8px, calc(var(--cell-size) * 0.21));
     opacity: 0.9;
     background-color: #F1491D;
     color: #EDEAE6;
@@ -93,7 +97,7 @@ body {
     position: absolute;
     top: 2px;
     left: 2px;
-    font-size: 10px;
+    font-size: max(8px, calc(var(--cell-size) * 0.21));
     opacity: 0.9;
     background-color: #561DF1;
     color: #EDEAE6;
@@ -126,7 +130,7 @@ body {
     position: absolute;
     top: 2px;
     left: 2px;
-    font-size: 10px;
+    font-size: max(8px, calc(var(--cell-size) * 0.21));
     opacity: 0.9;
     background-color: #F1491D;  /* Using orange for noise types */
     color: #EDEAE6;
@@ -149,7 +153,7 @@ body {
     position: absolute;
     top: 2px;
     left: 2px;
-    font-size: 10px;
+    font-size: max(8px, calc(var(--cell-size) * 0.21));
     opacity: 0.9;
     background-color: #F1491D;
     color: #EDEAE6;
@@ -173,7 +177,7 @@ body {
     position: absolute;
     top: 2px;
     right: 2px;
-    font-size: 10px;
+    font-size: max(8px, calc(var(--cell-size) * 0.21));
     opacity: 0.9;
     background-color: #F1CA1D;
     color: #282727;
@@ -229,7 +233,7 @@ body {
     position: absolute;
     top: 2px;
     left: 2px;
-    font-size: 10px;
+    font-size: max(8px, calc(var(--cell-size) * 0.21));
     opacity: 0.9;
     background-color: #561DF1;
     color: #EDEAE6;
@@ -392,47 +396,6 @@ body {
     animation: shoot 0.2s ease-out;
 }
 
-/* Hit animations for different objects */
-@keyframes hitT {
-    0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(86, 29, 241, 0.2); }
-    100% { background-color: #EDEAE6; }
-}
-
-@keyframes hitN {
-    0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(241, 73, 29, 0.2); }
-    100% { background-color: #EDEAE6; }
-}
-
-@keyframes hitD {
-    0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(241, 202, 29, 0.2); }
-    100% { background-color: #EDEAE6; }
-}
-
-@keyframes hitS {
-    0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(241, 202, 29, 0.2); }
-    100% { background-color: #EDEAE6; }
-}
-
-/* Hit classes */
-.hit-t {
-    animation: hitT 0.2s ease-out;
-}
-
-.hit-n {
-    animation: hitN 0.2s ease-out;
-}
-
-.hit-d {
-    animation: hitD 0.2s ease-out;
-}
-
-.hit-s {
-    animation: hitS 0.2s ease-out;
-}
 
 /* Sample object styles */
 .cell[data-sample] {
@@ -444,7 +407,7 @@ body {
     position: absolute;
     top: 2px;
     left: 2px;
-    font-size: 10px;
+    font-size: max(8px, calc(var(--cell-size) * 0.21));
     opacity: 0.9;
     background-color: #F1CA1D;
     color: #282727;
@@ -489,6 +452,89 @@ body {
 
 .hit-x {
     animation: hitX 0.2s ease-out;
+}
+
+@keyframes hitA {
+    0%   { background-color: #EDEAE6; }
+    50%  { background-color: rgba(241, 202, 29, 0.2); }
+    100% { background-color: #EDEAE6; }
+}
+
+.hit-a {
+    animation: hitA 0.2s ease-out;
+}
+
+/* Cell tooltip */
+#cell-tooltip {
+    position: fixed;
+    z-index: 200;
+    background: #282727;
+    color: #EDEAE6;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 10px 12px;
+    pointer-events: none;
+    display: none;
+    min-width: 150px;
+    max-width: 240px;
+    line-height: 1.5;
+}
+
+#cell-tooltip.visible {
+    display: block;
+}
+
+.tt-title {
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 3px;
+    letter-spacing: 0.03em;
+}
+
+.tt-desc {
+    font-size: 9px;
+    opacity: 0.55;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tt-settings {
+    display: flex;
+    gap: 12px;
+    border-top: 1px solid rgba(237, 234, 230, 0.15);
+    padding-top: 7px;
+}
+
+.tt-item {
+    flex: 1;
+}
+
+.tt-corner {
+    font-size: 9px;
+    opacity: 0.4;
+}
+
+.tt-label {
+    font-size: 9px;
+    opacity: 0.4;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-left: 2px;
+}
+
+.tt-value {
+    font-size: 11px;
+    display: block;
+    margin-top: 1px;
+}
+
+.tt-hint {
+    font-size: 9px;
+    opacity: 0.35;
+    margin-top: 6px;
+    border-top: 1px solid rgba(237, 234, 230, 0.1);
+    padding-top: 5px;
 }
 
 .credit {

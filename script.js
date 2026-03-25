@@ -10,21 +10,18 @@ document.addEventListener('DOMContentLoaded', () => {
         { bpm: 140, icon: 'tempo5.svg' }
     ];
     let currentTempoIndex = 0;
-    const BPM = TEMPO_SETTINGS[currentTempoIndex].bpm;
-    let MS_PER_BEAT = (60 * 1000) / BPM;
+    let MS_PER_BEAT = (60 * 1000) / TEMPO_SETTINGS[currentTempoIndex].bpm;
     let projectiles = [];
     let shooters = [];
     let beatCount = 0;
     let isPlaying = true;
     let shootingInterval = null;
 
-    // Define available tones (using standard octave notation)
     const TONES = [
         'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4',
         'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5'
     ];
 
-    // Add oscillator types
     const OSCILLATOR_TYPES = [
         { code: 'si', type: 'sine' },
         { code: 'sq', type: 'square' },
@@ -32,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { code: 'st', type: 'sawtooth' }
     ];
 
-    // Add noise types
     const NOISE_TYPES = [
         { code: 'kd', type: 'kick', settings: {
             noise: { type: 'brown' },
@@ -52,24 +48,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }}
     ];
 
-    // Add shooting speed variations
     const SHOOT_SPEEDS = [
-        { code: 'n', multiplier: 1, desc: 'normal' },    // shoots every 4 beats (current default)
-        { code: 'f', multiplier: 2, desc: 'fast' },      // shoots every 2 beats
-        { code: 'ff', multiplier: 4, desc: 'very fast' },// shoots every beat
-        { code: 's', multiplier: 0.5, desc: 'slow' },    // shoots every 8 beats
-        { code: 'ss', multiplier: 0.25, desc: 'very slow' } // shoots every 16 beats
+        { code: 'n',  multiplier: 1,    desc: 'normal' },
+        { code: 'f',  multiplier: 2,    desc: 'fast' },
+        { code: 'ff', multiplier: 4,    desc: 'very fast' },
+        { code: 's',  multiplier: 0.5,  desc: 'slow' },
+        { code: 'ss', multiplier: 0.25, desc: 'very slow' }
     ];
 
-    // Add deflector directions
-    const DEFLECTOR_DIRECTIONS = {
-        e: { dx: 1, dy: 0, name: 'e' },    // east
-        s: { dx: 0, dy: 1, name: 's' },    // south
-        w: { dx: -1, dy: 0, name: 'w' },   // west
-        n: { dx: 0, dy: -1, name: 'n' }    // north
+    const DIRECTIONS = {
+        e: { dx: 1,  dy: 0,  name: 'e' },
+        s: { dx: 0,  dy: 1,  name: 's' },
+        w: { dx: -1, dy: 0,  name: 'w' },
+        n: { dx: 0,  dy: -1, name: 'n' }
     };
 
-    // Add after other constants
     const GATE_FILTERS = [
         { code: '1', interval: 1 },
         { code: '2', interval: 2 },
@@ -78,14 +71,12 @@ document.addEventListener('DOMContentLoaded', () => {
         { code: 'r', interval: 'random' }
     ];
 
-    // Add audio samples
     const AUDIO_SAMPLES = [
         { code: '01', file: '01.wav' },
         { code: '02', file: '02.wav' },
         { code: '03', file: '03.wav' }
     ];
 
-    // Create audio players pool
     const audioPlayers = AUDIO_SAMPLES.map(sample => {
         const player = new Tone.Player({
             url: `samples/${sample.file}`,
@@ -94,38 +85,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return { code: sample.code, player };
     });
 
-    // Create a function to get a new synth instance
     function createSynth() {
         return new Tone.Synth({
-            oscillator: {
-                type: "sine" // default type, will be changed when playing
-            },
-            envelope: {
-                attack: 0.01,
-                decay: 0.1,
-                sustain: 0.3,
-                release: 0.1
-            }
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.1 }
         }).toDestination();
     }
 
-    // Initialize a pool of synths for polyphonic playback
     const synthPool = Array(5).fill(null).map(() => createSynth());
     let currentSynthIndex = 0;
 
-    // Initialize a pool of noise synths for polyphonic playback
     const noiseSynthPool = Array(5).fill(null).map(() => new Tone.NoiseSynth().toDestination());
     let currentNoiseSynthIndex = 0;
 
-    // Define directions
-    const DIRECTIONS = {
-        e: { dx: 1, dy: 0, name: 'e' },    // east
-        s: { dx: 0, dy: 1, name: 's' },    // south
-        w: { dx: -1, dy: 0, name: 'w' },   // west
-        n: { dx: 0, dy: -1, name: 'n' }    // north
-    };
-
-    // Create grid cells with position data
+    // --- Build grid cells and a fast 2D cache ---
     for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
@@ -134,222 +107,150 @@ document.addEventListener('DOMContentLoaded', () => {
         grid.appendChild(cell);
     }
 
-    // Handle cell selection and rotation
+    // Flat array and 2D array for O(1) lookup — built once, never queried again
+    const cells = Array.from(grid.querySelectorAll('.cell'));
+    const cellGrid = [];
+    for (let y = 0; y < GRID_SIZE; y++) {
+        cellGrid[y] = cells.slice(y * GRID_SIZE, y * GRID_SIZE + GRID_SIZE);
+    }
+
+    function getCellAt(x, y) {
+        if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return null;
+        return cellGrid[y][x];
+    }
+
+    // --- Animation helpers ---
+    function flashClass(el, cls) {
+        el.classList.add(cls);
+        el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+    }
+
+    // --- Click handler ---
     grid.addEventListener('click', async (e) => {
-        if (e.target.classList.contains('cell')) {
-            if (Tone.context.state !== 'running') {
-                await Tone.start();
-            }
+        if (!e.target.classList.contains('cell')) return;
 
-            const x = parseInt(e.target.dataset.x);
-            const y = parseInt(e.target.dataset.y);
-            
-            const rect = e.target.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-            
-            // Check for clicks in corners
-            const isLeftCornerClick = clickX <= 20 && clickY <= 20;
-            const isRightCornerClick = clickX >= rect.width - 20 && clickY <= 20;
-            
-            // Handle S object
-            if (e.target.textContent === 'S') {
-                const shooterIndex = shooters.findIndex(s => s.x === x && s.y === y);
-                if (shooterIndex !== -1) {
-                    if (isLeftCornerClick) {
-                        // Change speed
-                        const currentSpeed = e.target.dataset.speed || 'n';
-                        const currentIndex = SHOOT_SPEEDS.findIndex(s => s.code === currentSpeed);
-                        const nextIndex = (currentIndex + 1) % SHOOT_SPEEDS.length;
-                        const nextSpeed = SHOOT_SPEEDS[nextIndex];
-                        
-                        shooters[shooterIndex].speedCode = nextSpeed.code;
-                        e.target.dataset.speed = nextSpeed.code;
-                        updateURL();
-                        return;
-                    } else if (isRightCornerClick) {
-                        // Change direction
-                        const directions = Object.values(DIRECTIONS);
-                        const currentDir = shooters[shooterIndex].direction;
-                        const currentIndex = directions.findIndex(d => 
-                            d.dx === currentDir.dx && d.dy === currentDir.dy
-                        );
-                        const nextIndex = (currentIndex + 1) % directions.length;
-                        const nextDir = directions[nextIndex];
-                        
-                        shooters[shooterIndex].direction = nextDir;
-                        e.target.dataset.direction = nextDir.name;
-                        updateURL();
-                        return;
-                    }
-                }
-            }
-            
-            // Handle T object
-            if (e.target.textContent === 'T') {
-                const shooterIndex = shooters.findIndex(s => s.x === x && s.y === y);
-                if (shooterIndex !== -1) {
-                    if (isLeftCornerClick) {
-                        // Change speed
-                        const currentSpeed = e.target.dataset.speed || 'n';
-                        const currentIndex = SHOOT_SPEEDS.findIndex(s => s.code === currentSpeed);
-                        const nextIndex = (currentIndex + 1) % SHOOT_SPEEDS.length;
-                        const nextSpeed = SHOOT_SPEEDS[nextIndex];
-                        
-                        shooters[shooterIndex].speedCode = nextSpeed.code;
-                        e.target.dataset.speed = nextSpeed.code;
-                        updateURL();
-                        return;
-                    } else if (isRightCornerClick) {
-                        // Change direction
-                        const directions = Object.values(DIRECTIONS);
-                        const currentDir = shooters[shooterIndex].direction;
-                        const currentIndex = directions.findIndex(d => 
-                            d.dx === currentDir.dx && d.dy === currentDir.dy
-                        );
-                        const nextIndex = (currentIndex + 1) % directions.length;
-                        const nextDir = directions[nextIndex];
-                        
-                        shooters[shooterIndex].direction = nextDir;
-                        e.target.dataset.direction = nextDir.name;
-                        updateURL();
-                        return;
-                    }
-                }
-            }
-            
-            // Handle M object
-            if (e.target.textContent === 'M') {
+        if (Tone.context.state !== 'running') {
+            await Tone.start();
+        }
+
+        const cell = e.target;
+        const x = parseInt(cell.dataset.x);
+        const y = parseInt(cell.dataset.y);
+
+        const rect = cell.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        const cornerThreshold = rect.width * 0.42;
+        const isLeftCornerClick  = clickX <= cornerThreshold && clickY <= cornerThreshold;
+        const isRightCornerClick = clickX >= rect.width - cornerThreshold && clickY <= cornerThreshold;
+
+        // Handle T object
+        if (cell.textContent === 'T') {
+            const shooter = shooters.find(s => s.x === x && s.y === y);
+            if (shooter) {
                 if (isLeftCornerClick) {
-                    // Change oscillator type
-                    const currentOsc = e.target.dataset.oscillator || 'si';
-                    const currentIndex = OSCILLATOR_TYPES.findIndex(osc => osc.code === currentOsc);
-                    const nextIndex = (currentIndex + 1) % OSCILLATOR_TYPES.length;
-                    const nextOsc = OSCILLATOR_TYPES[nextIndex];
-                    e.target.dataset.oscillator = nextOsc.code;
-                    
-                    // Preview the sound
-                    const tone = e.target.dataset.tone || 'C4';
-                    const synth = synthPool[currentSynthIndex];
-                    synth.oscillator.type = nextOsc.type;
-                    synth.triggerAttackRelease(tone, "8n");
+                    const currentIndex = SHOOT_SPEEDS.findIndex(s => s.code === (cell.dataset.speed || 'n'));
+                    const next = SHOOT_SPEEDS[(currentIndex + 1) % SHOOT_SPEEDS.length];
+                    shooter.speedCode = next.code;
+                    cell.dataset.speed = next.code;
                     updateURL();
                     return;
-                }
-                else if (isRightCornerClick) {
-                    // Change tone
-                    const currentTone = e.target.dataset.tone || 'C4';
-                    const currentIndex = TONES.indexOf(currentTone);
-                    const nextIndex = (currentIndex + 1) % TONES.length;
-                    const nextTone = TONES[nextIndex];
-                    e.target.dataset.tone = nextTone;
-                    e.target.title = nextTone;
-                    
-                    // Preview the sound
-                    const oscType = OSCILLATOR_TYPES.find(
-                        osc => osc.code === (e.target.dataset.oscillator || 'si')
-                    ).type;
-                    const synth = synthPool[currentSynthIndex];
-                    synth.oscillator.type = oscType;
-                    synth.triggerAttackRelease(nextTone, "8n");
+                } else if (isRightCornerClick) {
+                    const dirs = Object.values(DIRECTIONS);
+                    const currentIndex = dirs.findIndex(d => d.dx === shooter.direction.dx && d.dy === shooter.direction.dy);
+                    const next = dirs[(currentIndex + 1) % dirs.length];
+                    shooter.direction = next;
+                    cell.dataset.direction = next.name;
                     updateURL();
                     return;
                 }
             }
+        }
 
-            // Handle N object
-            if (e.target.textContent === 'N' && isLeftCornerClick) {
-                // Change noise type
-                const currentNoise = e.target.dataset.noisetype || 'kd';
-                const currentIndex = NOISE_TYPES.findIndex(n => n.code === currentNoise);
-                const nextIndex = (currentIndex + 1) % NOISE_TYPES.length;
-                const nextNoise = NOISE_TYPES[nextIndex];
-                e.target.dataset.noisetype = nextNoise.code;
-                
-                // Preview the sound
-                const synth = noiseSynthPool[currentNoiseSynthIndex];
-                Object.assign(synth.noise, nextNoise.settings.noise);
-                Object.assign(synth.envelope, nextNoise.settings.envelope);
-                synth.triggerAttackRelease('8n');
+        // Handle M object
+        if (cell.textContent === 'M') {
+            if (isLeftCornerClick) {
+                const currentIndex = OSCILLATOR_TYPES.findIndex(o => o.code === (cell.dataset.oscillator || 'si'));
+                const next = OSCILLATOR_TYPES[(currentIndex + 1) % OSCILLATOR_TYPES.length];
+                cell.dataset.oscillator = next.code;
+                const synth = synthPool[currentSynthIndex];
+                synth.oscillator.type = next.type;
+                synth.triggerAttackRelease(cell.dataset.tone || 'C4', '8n');
+                updateURL();
+                return;
+            } else if (isRightCornerClick) {
+                const currentIndex = TONES.indexOf(cell.dataset.tone || 'C4');
+                const nextTone = TONES[(currentIndex + 1) % TONES.length];
+                cell.dataset.tone = nextTone;
+                cell.title = nextTone;
+                const oscType = OSCILLATOR_TYPES.find(o => o.code === (cell.dataset.oscillator || 'si')).type;
+                const synth = synthPool[currentSynthIndex];
+                synth.oscillator.type = oscType;
+                synth.triggerAttackRelease(nextTone, '8n');
                 updateURL();
                 return;
             }
+        }
 
-            // Handle D object
-            if (e.target.textContent === 'D' && isRightCornerClick) {
-                const currentDeflect = e.target.dataset.deflect || 'e';
-                const directions = Object.values(DEFLECTOR_DIRECTIONS);
-                const currentIndex = directions.findIndex(d => d.name === currentDeflect);
-                const nextIndex = (currentIndex + 1) % directions.length;
-                const nextDir = directions[nextIndex];
-                
-                e.target.dataset.deflect = nextDir.name;
-                updateURL();
-                return;
-            }
+        // Handle N object
+        if (cell.textContent === 'N' && isLeftCornerClick) {
+            const currentIndex = NOISE_TYPES.findIndex(n => n.code === (cell.dataset.noisetype || 'kd'));
+            const next = NOISE_TYPES[(currentIndex + 1) % NOISE_TYPES.length];
+            cell.dataset.noisetype = next.code;
+            const synth = noiseSynthPool[currentNoiseSynthIndex];
+            Object.assign(synth.noise, next.settings.noise);
+            Object.assign(synth.envelope, next.settings.envelope);
+            synth.triggerAttackRelease('8n');
+            updateURL();
+            return;
+        }
 
-            // Handle G object
-            if (e.target.textContent === 'G' && isLeftCornerClick) {
-                const currentGate = e.target.dataset.gate || '1';
-                const currentIndex = GATE_FILTERS.findIndex(g => g.code === currentGate);
-                const nextIndex = (currentIndex + 1) % GATE_FILTERS.length;
-                const nextGate = GATE_FILTERS[nextIndex];
-                e.target.dataset.gate = nextGate.code;
-                updateURL();
-                return;
-            }
+        // Handle D object
+        if (cell.textContent === 'D' && isRightCornerClick) {
+            const dirs = Object.values(DIRECTIONS);
+            const currentIndex = dirs.findIndex(d => d.name === (cell.dataset.deflect || 'e'));
+            cell.dataset.deflect = dirs[(currentIndex + 1) % dirs.length].name;
+            updateURL();
+            return;
+        }
 
-            // Handle S object
-            if (e.target.textContent === 'S' && isLeftCornerClick) {
-                const currentSample = e.target.dataset.sample || '01';
-                const currentIndex = AUDIO_SAMPLES.findIndex(s => s.code === currentSample);
-                const nextIndex = (currentIndex + 1) % AUDIO_SAMPLES.length;
-                const nextSample = AUDIO_SAMPLES[nextIndex];
-                e.target.dataset.sample = nextSample.code;
-                
-                // Preview the sample
-                const player = audioPlayers.find(p => p.code === nextSample.code);
-                if (player && player.player.loaded) {
-                    player.player.start();
-                }
-                updateURL();
-                return;
-            }
+        // Handle G object
+        if (cell.textContent === 'G' && isLeftCornerClick) {
+            const currentIndex = GATE_FILTERS.findIndex(g => g.code === (cell.dataset.gate || '1'));
+            cell.dataset.gate = GATE_FILTERS[(currentIndex + 1) % GATE_FILTERS.length].code;
+            updateURL();
+            return;
+        }
 
-            // Only select cell if not clicking corners
-            if (!isLeftCornerClick && !isRightCornerClick) {
-                if (selectedCell) {
-                    selectedCell.classList.remove('selected');
-                }
-                selectedCell = e.target;
-                selectedCell.classList.add('selected');
-            }
+        // Handle S object
+        if (cell.textContent === 'S' && isLeftCornerClick) {
+            const currentIndex = AUDIO_SAMPLES.findIndex(s => s.code === (cell.dataset.sample || '01'));
+            const next = AUDIO_SAMPLES[(currentIndex + 1) % AUDIO_SAMPLES.length];
+            cell.dataset.sample = next.code;
+            const player = audioPlayers.find(p => p.code === next.code);
+            if (player && player.player.loaded) player.player.start();
+            updateURL();
+            return;
+        }
 
-            // Add URL update after any property change
-            if (isLeftCornerClick || isRightCornerClick) {
-                updateURL();
-            }
+        // Select cell if not a corner click
+        if (!isLeftCornerClick && !isRightCornerClick) {
+            if (selectedCell) selectedCell.classList.remove('selected');
+            selectedCell = cell;
+            selectedCell.classList.add('selected');
+        }
+
+        if (isLeftCornerClick || isRightCornerClick) {
+            updateURL();
         }
     });
 
-    function getCellAt(x, y) {
-        return document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-    }
-
     function createProjectile(shooter) {
-        // Start projectile from shooter cell so first move hits adjacent cell
         const startX = parseInt(shooter.x);
         const startY = parseInt(shooter.y);
-        
-        // Only create projectile if shooter itself is within grid
-        if (startX >= 0 && startX < GRID_SIZE && 
-            startY >= 0 && startY < GRID_SIZE) {
-            return {
-                x: startX,
-                y: startY,
-                direction: shooter.direction,
-                char: '·'
-            };
+        if (startX >= 0 && startX < GRID_SIZE && startY >= 0 && startY < GRID_SIZE) {
+            return { x: startX, y: startY, direction: shooter.direction, char: '·' };
         }
         return null;
     }
@@ -358,34 +259,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cell.textContent === 'S') {
             const sampleCode = cell.dataset.sample || '01';
             const player = audioPlayers.find(p => p.code === sampleCode);
-            if (player && player.player.loaded) {
-                player.player.start();
-            }
+            if (player && player.player.loaded) player.player.start();
         } else if (cell.textContent === 'N') {
-            const noiseType = NOISE_TYPES.find(
-                n => n.code === (cell.dataset.noisetype || 'kd')
-            );
+            const noiseType = NOISE_TYPES.find(n => n.code === (cell.dataset.noisetype || 'kd'));
             const synth = noiseSynthPool[currentNoiseSynthIndex];
             Object.assign(synth.noise, noiseType.settings.noise);
             Object.assign(synth.envelope, noiseType.settings.envelope);
             synth.triggerAttackRelease('8n');
             currentNoiseSynthIndex = (currentNoiseSynthIndex + 1) % noiseSynthPool.length;
         } else if (cell.textContent === 'M') {
-            const tone = cell.dataset.tone || 'C4';
-            const oscType = OSCILLATOR_TYPES.find(
-                osc => osc.code === (cell.dataset.oscillator || 'si')
-            ).type;
-            
-            const synth = synthPool[currentSynthIndex];
+            const tone    = cell.dataset.tone || 'C4';
+            const oscType = OSCILLATOR_TYPES.find(o => o.code === (cell.dataset.oscillator || 'si')).type;
+            const synth   = synthPool[currentSynthIndex];
             synth.oscillator.type = oscType;
-            synth.triggerAttackRelease(tone, "8n");
+            synth.triggerAttackRelease(tone, '8n');
             currentSynthIndex = (currentSynthIndex + 1) % synthPool.length;
         }
     }
 
     function updateProjectiles() {
         const hitsToneThisFrame = [];
-        const newProjectiles = []; // Array to collect new projectiles
+        const newProjectiles = [];
 
         projectiles = projectiles.filter(projectile => {
             const oldCell = getCellAt(projectile.x, projectile.y);
@@ -396,288 +290,252 @@ document.addEventListener('DOMContentLoaded', () => {
             projectile.x += projectile.direction.dx;
             projectile.y += projectile.direction.dy;
 
-            if (projectile.x >= GRID_SIZE || projectile.x < 0 || 
-                projectile.y >= GRID_SIZE || projectile.y < 0) {
-                return false;
-            }
-
             const newCell = getCellAt(projectile.x, projectile.y);
-            if (newCell) {
-                // Handle gate
-                if (newCell.textContent === 'G') {
-                    const gateType = newCell.dataset.gate;
-                    
-                    if (gateType === 'r') {
-                        // Random mode: 50% chance to pass
-                        if (Math.random() < 0.5) {
-                            // Add hit animation for gate
-                            newCell.classList.add('hit-g');
-                            setTimeout(() => {
-                                newCell.classList.remove('hit-g');
-                            }, 200);
-                        } else {
-                            return false; // Don't let bullet through
-                        }
-                    } else {
-                        // Normal numbered modes
-                        const gateInterval = parseInt(gateType);
-                        let bulletCount = parseInt(newCell.dataset.bulletCount || '0');
-                        bulletCount = (bulletCount + 1) % gateInterval;
-                        newCell.dataset.bulletCount = bulletCount.toString();
-                        
-                        // Only let through if bulletCount is 0
-                        if (bulletCount !== 0) {
-                            return false;
-                        }
-                        
-                        // Add hit animation for gate
-                        newCell.classList.add('hit-g');
-                        setTimeout(() => {
-                            newCell.classList.remove('hit-g');
-                        }, 200);
-                    }
-                }
-                
-                // Handle deflector
-                if (newCell.textContent === 'D') {
-                    const deflectDir = DEFLECTOR_DIRECTIONS[newCell.dataset.deflect];
-                    projectile.direction = deflectDir;
-                    // Add hit animation for D
-                    newCell.classList.add('hit-d');
-                    setTimeout(() => {
-                        newCell.classList.remove('hit-d');
-                    }, 200);
-                }
-                // Handle M, N, and S objects
-                if (newCell.textContent === 'M') {
-                    hitsToneThisFrame.push(newCell);
-                    newCell.classList.add('hit-t');
-                    setTimeout(() => {
-                        newCell.classList.remove('hit-t');
-                    }, 200);
-                }
-                if (newCell.textContent === 'N') {
-                    hitsToneThisFrame.push(newCell);
-                    newCell.classList.add('hit-n');
-                    setTimeout(() => {
-                        newCell.classList.remove('hit-n');
-                    }, 200);
-                }
-                if (newCell.textContent === 'S') {
-                    hitsToneThisFrame.push(newCell);
-                    newCell.classList.add('hit-s');
-                    setTimeout(() => {
-                        newCell.classList.remove('hit-s');
-                    }, 200);
-                }
-                // Handle splitter (X)
-                if (newCell.textContent === 'X') {
-                    // Create two additional projectiles perpendicular to current direction
-                    const currentDir = projectile.direction;
-                    
-                    // If moving horizontally, create vertical bullets
-                    if (Math.abs(currentDir.dx) === 1) {
-                        // Create north bullet starting from splitter cell
-                        newProjectiles.push({
-                            x: projectile.x,
-                            y: projectile.y,
-                            direction: DIRECTIONS.n,
-                            char: '·'
-                        });
-                        // Create south bullet starting from splitter cell
-                        newProjectiles.push({
-                            x: projectile.x,
-                            y: projectile.y,
-                            direction: DIRECTIONS.s,
-                            char: '·'
-                        });
-                    }
-                    // If moving vertically, create horizontal bullets
-                    else if (Math.abs(currentDir.dy) === 1) {
-                        // Create east bullet starting from splitter cell
-                        newProjectiles.push({
-                            x: projectile.x,
-                            y: projectile.y,
-                            direction: DIRECTIONS.e,
-                            char: '·'
-                        });
-                        // Create west bullet starting from splitter cell
-                        newProjectiles.push({
-                            x: projectile.x,
-                            y: projectile.y,
-                            direction: DIRECTIONS.w,
-                            char: '·'
-                        });
-                    }
+            if (!newCell) return false; // out of bounds
 
-                    // Add hit animation
-                    newCell.classList.add('hit-x');
-                    setTimeout(() => {
-                        newCell.classList.remove('hit-x');
-                    }, 200);
-                }
-                if (!newCell.textContent || newCell.textContent === '·') {
-                    newCell.textContent = projectile.char;
+            // Handle gate
+            if (newCell.textContent === 'G') {
+                const gateType = newCell.dataset.gate;
+                if (gateType === 'r') {
+                    if (Math.random() < 0.5) {
+                        flashClass(newCell, 'hit-g');
+                    } else {
+                        return false;
+                    }
+                } else {
+                    const gateInterval = parseInt(gateType);
+                    let bulletCount = parseInt(newCell.dataset.bulletCount || '0');
+                    bulletCount = (bulletCount + 1) % gateInterval;
+                    newCell.dataset.bulletCount = bulletCount;
+                    if (bulletCount !== 0) return false;
+                    flashClass(newCell, 'hit-g');
                 }
             }
+
+            // Handle deflector
+            if (newCell.textContent === 'D') {
+                projectile.direction = DIRECTIONS[newCell.dataset.deflect];
+                flashClass(newCell, 'hit-d');
+            }
+
+            // Handle tone objects
+            if (newCell.textContent === 'M') {
+                hitsToneThisFrame.push(newCell);
+                flashClass(newCell, 'hit-t');
+            }
+            if (newCell.textContent === 'N') {
+                hitsToneThisFrame.push(newCell);
+                flashClass(newCell, 'hit-n');
+            }
+            if (newCell.textContent === 'S') {
+                hitsToneThisFrame.push(newCell);
+                flashClass(newCell, 'hit-s');
+            }
+
+            // Handle splitter
+            if (newCell.textContent === 'X') {
+                const d = projectile.direction;
+                if (Math.abs(d.dx) === 1) {
+                    newProjectiles.push({ x: projectile.x, y: projectile.y, direction: DIRECTIONS.n, char: '·' });
+                    newProjectiles.push({ x: projectile.x, y: projectile.y, direction: DIRECTIONS.s, char: '·' });
+                } else {
+                    newProjectiles.push({ x: projectile.x, y: projectile.y, direction: DIRECTIONS.e, char: '·' });
+                    newProjectiles.push({ x: projectile.x, y: projectile.y, direction: DIRECTIONS.w, char: '·' });
+                }
+                flashClass(newCell, 'hit-x');
+            }
+
+            if (!newCell.textContent || newCell.textContent === '·') {
+                newCell.textContent = projectile.char;
+            }
+
             return true;
         });
 
-        // Add new projectiles after filtering
-        projectiles = projectiles.concat(
-            newProjectiles.filter(p => 
-                p.x >= 0 && p.x < GRID_SIZE && 
-                p.y >= 0 && p.y < GRID_SIZE
-            )
-        );
+        // Add new projectiles from splitters (bounds already checked by getCellAt)
+        for (const p of newProjectiles) {
+            if (getCellAt(p.x, p.y)) projectiles.push(p);
+        }
 
-        hitsToneThisFrame.forEach(cell => {
+        for (const cell of hitsToneThisFrame) {
             playTone(cell);
-        });
+        }
     }
 
     function shootFromShooters() {
         beatCount++;
-        shooters.forEach(shooter => {
+        for (const shooter of shooters) {
             const speedSetting = SHOOT_SPEEDS.find(s => s.code === shooter.speedCode);
-            const beatMultiple = 4 / speedSetting.multiplier; // 4 is our base beat count
-            
+            const beatMultiple = 4 / speedSetting.multiplier;
             if (beatCount % beatMultiple === 0) {
                 const projectile = createProjectile(shooter);
                 if (projectile) {
                     projectiles.push(projectile);
                     const shooterCell = getCellAt(shooter.x, shooter.y);
-                    shooterCell.classList.add('shooting');
-                    setTimeout(() => {
-                        shooterCell.classList.remove('shooting');
-                    }, 200);
+                    if (shooterCell) flashClass(shooterCell, 'shooting');
                 }
             }
-        });
+        }
     }
 
-    // Add the play/stop control functionality
-    const playButton = document.getElementById('play-button');
+    // --- Play/Stop ---
+    const playButton  = document.getElementById('play-button');
     const controlIcon = document.getElementById('control-icon');
+
+    function startLoop() {
+        shootingInterval = setInterval(() => {
+            updateProjectiles();
+            shootFromShooters();
+        }, MS_PER_BEAT);
+    }
 
     playButton.addEventListener('click', () => {
         isPlaying = !isPlaying;
-        
         if (isPlaying) {
-            // Start shooting
-            shootingInterval = setInterval(() => {
-                updateProjectiles();
-                shootFromShooters();
-            }, MS_PER_BEAT);
-            
-            // Switch to stop icon
+            startLoop();
             controlIcon.src = 'stop.svg';
         } else {
-            // Stop shooting
-            if (shootingInterval) {
-                clearInterval(shootingInterval);
-                shootingInterval = null;
-            }
-            
-            // Switch to play icon
+            clearInterval(shootingInterval);
+            shootingInterval = null;
             controlIcon.src = 'play.svg';
         }
     });
 
-    // Add this function to update URL without reloading page
+    // --- URL state ---
     function updateURL() {
-        const state = encodeGridState();
+        const state  = encodeGridState();
         const newURL = `${window.location.origin}${window.location.pathname}?grid=${state}`;
         window.history.replaceState({ grid: state }, '', newURL);
     }
 
-    // Modify the keypress handler to update URL after placing objects
-    document.addEventListener('keypress', (e) => {
-        if (selectedCell) {
-            const char = String.fromCharCode(e.keyCode).toUpperCase();
-            
-            if (char === 'T') {
-                const x = parseInt(selectedCell.dataset.x);
-                const y = parseInt(selectedCell.dataset.y);
-                shooters.push({ 
-                    x, 
-                    y, 
-                    direction: DIRECTIONS.e,
-                    speedCode: 'n'
-                });
-                selectedCell.textContent = char;
-                selectedCell.dataset.direction = 'e';
-                selectedCell.dataset.speed = 'n';
-            } else if (char === 'M') {
-                selectedCell.textContent = char;
-                selectedCell.dataset.tone = 'C4';
-                selectedCell.dataset.oscillator = 'si';
-                selectedCell.title = 'C4';
-            } else if (char === 'N') {
-                selectedCell.textContent = char;
-                selectedCell.dataset.noisetype = 'kd'; // Set default noise type
-                selectedCell.removeAttribute('data-tone');
-                selectedCell.removeAttribute('data-oscillator');
-            } else if (char === 'D') {
-                selectedCell.textContent = char;
-                selectedCell.dataset.deflect = 'e'; // Start with east direction
-            } else if (char === 'G') {
-                selectedCell.textContent = char;
-                selectedCell.dataset.gate = '1';  // Start with letting all bullets pass
-                selectedCell.dataset.bulletCount = '0';  // Counter for bullets
-            } else if (char === 'S') {
-                selectedCell.textContent = char;
-                selectedCell.dataset.sample = '01'; // Default to first sample
-            } else if (char === 'X') {
-                selectedCell.textContent = char;
-                selectedCell.dataset.splitter = 'x';  // Just to mark it as a splitter
+    function encodeGridState() {
+        const parts = [`t${currentTempoIndex}`];
+        cells.forEach((cell, index) => {
+            if (!cell.textContent) return;
+            let code = index.toString().padStart(3, '0') + cell.textContent;
+            switch (cell.textContent) {
+                case 'T': code += (cell.dataset.speed || 'n') + (cell.dataset.direction || 'e'); break;
+                case 'M': code += (cell.dataset.oscillator || 'si') + (cell.dataset.tone || 'C4'); break;
+                case 'N': code += (cell.dataset.noisetype || 'kd'); break;
+                case 'D': code += (cell.dataset.deflect || 'e'); break;
+                case 'G': code += (cell.dataset.gate || '1'); break;
+                case 'S': code += (cell.dataset.sample || '01'); break;
+                case 'X': code += 'x'; break;
             }
-            
-            selectedCell.classList.remove('selected');
-            selectedCell = null;
-            
-            // Add URL update
-            updateURL();
-        }
-    });
-
-    // Prevent context menu on right click
-    grid.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-    });
-
-    // Update the clearCell function
-    function clearCell(cell) {
-        // Remove shooter if exists
-        const x = parseInt(cell.dataset.x);
-        const y = parseInt(cell.dataset.y);
-        const shooterIndex = shooters.findIndex(s => s.x === x && s.y === y);
-        if (shooterIndex !== -1) {
-            shooters.splice(shooterIndex, 1);
-        }
-
-        // Clear all cell properties
-        cell.textContent = '';
-        
-        // Clear all possible data attributes
-        cell.removeAttribute('data-direction');
-        cell.removeAttribute('data-speed');
-        cell.removeAttribute('data-tone');
-        cell.removeAttribute('data-oscillator');
-        cell.removeAttribute('data-noisetype');
-        cell.removeAttribute('data-deflect');
-        cell.removeAttribute('data-gate');
-        cell.removeAttribute('data-bulletCount');
-        cell.removeAttribute('data-sample');
-        cell.removeAttribute('data-splitter');
-        cell.removeAttribute('title');
-
-        // Only keep the position data attributes
-        cell.dataset.x = x;
-        cell.dataset.y = y;
+            parts.push(code);
+        });
+        return parts.join('-');
     }
 
-    // Modify the right-click handler to update URL after removing objects
+    function decodeGridState(encodedState) {
+        clearGrid();
+        projectiles = [];
+
+        const cellCodes = encodedState.split('-');
+
+        if (cellCodes[0].startsWith('t')) {
+            currentTempoIndex = parseInt(cellCodes[0].slice(1));
+            MS_PER_BEAT = (60 * 1000) / TEMPO_SETTINGS[currentTempoIndex].bpm;
+            document.getElementById('tempo-button').querySelector('img').src = TEMPO_SETTINGS[currentTempoIndex].icon;
+            cellCodes.shift();
+        }
+
+        for (const code of cellCodes) {
+            const position   = parseInt(code.slice(0, 3));
+            const objectType = code[3];
+            const cell       = cells[position];
+            if (!cell) continue;
+
+            cell.textContent = objectType;
+
+            switch (objectType) {
+                case 'T':
+                    cell.dataset.speed     = code[4];
+                    cell.dataset.direction = code[5];
+                    shooters.push({
+                        x:         position % GRID_SIZE,
+                        y:         Math.floor(position / GRID_SIZE),
+                        direction: DIRECTIONS[code[5]],
+                        speedCode: code[4]
+                    });
+                    break;
+                case 'M':
+                    cell.dataset.oscillator = code.slice(4, 6);
+                    cell.dataset.tone       = code.slice(6);
+                    break;
+                case 'N':
+                    cell.dataset.noisetype = code.slice(4);
+                    break;
+                case 'D':
+                    cell.dataset.deflect = code[4];
+                    break;
+                case 'G':
+                    cell.dataset.gate        = code[4];
+                    cell.dataset.bulletCount = '0';
+                    break;
+                case 'S':
+                    cell.dataset.sample = code.slice(4);
+                    break;
+                case 'X':
+                    cell.dataset.splitter = 'x';
+                    break;
+            }
+        }
+
+        // Clear any stray bullet characters
+        for (const cell of cells) {
+            if (cell.textContent === '·') cell.textContent = '';
+        }
+    }
+
+    // --- Keyboard input ---
+    document.addEventListener('keypress', (e) => {
+        if (!selectedCell) return;
+        const char = String.fromCharCode(e.keyCode).toUpperCase();
+
+        if (char === 'T') {
+            shooters.push({
+                x: parseInt(selectedCell.dataset.x),
+                y: parseInt(selectedCell.dataset.y),
+                direction: DIRECTIONS.e,
+                speedCode: 'n'
+            });
+            selectedCell.textContent    = 'T';
+            selectedCell.dataset.direction = 'e';
+            selectedCell.dataset.speed     = 'n';
+        } else if (char === 'M') {
+            selectedCell.textContent       = 'M';
+            selectedCell.dataset.tone      = 'C4';
+            selectedCell.dataset.oscillator = 'si';
+            selectedCell.title             = 'C4';
+        } else if (char === 'N') {
+            selectedCell.textContent = 'N';
+            selectedCell.dataset.noisetype = 'kd';
+            selectedCell.removeAttribute('data-tone');
+            selectedCell.removeAttribute('data-oscillator');
+        } else if (char === 'D') {
+            selectedCell.textContent    = 'D';
+            selectedCell.dataset.deflect = 'e';
+        } else if (char === 'G') {
+            selectedCell.textContent        = 'G';
+            selectedCell.dataset.gate       = '1';
+            selectedCell.dataset.bulletCount = '0';
+        } else if (char === 'S') {
+            selectedCell.textContent     = 'S';
+            selectedCell.dataset.sample  = '01';
+        } else if (char === 'X') {
+            selectedCell.textContent      = 'X';
+            selectedCell.dataset.splitter = 'x';
+        }
+
+        selectedCell.classList.remove('selected');
+        selectedCell = null;
+        updateURL();
+    });
+
+    // --- Right-click to clear ---
+    grid.addEventListener('contextmenu', (e) => e.preventDefault());
+
     grid.addEventListener('mousedown', (e) => {
         if (e.button === 2 && e.target.classList.contains('cell')) {
             e.preventDefault();
@@ -686,332 +544,207 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Add this CSS for the shooting animation
-    document.head.insertAdjacentHTML('beforeend', `
-        <style>
-            @keyframes shoot {
-                0% { background-color: #EDEAE6; }
-                50% { background-color: rgba(241, 73, 29, 0.2); }
-                100% { background-color: #EDEAE6; }
-            }
-            .shooting {
-                animation: shoot 0.2s ease-out;
-            }
-            @keyframes hitT {
-                0% { background-color: #EDEAE6; }
-                50% { background-color: rgba(86, 29, 241, 0.2); } /* Purple for T */
-                100% { background-color: #EDEAE6; }
-            }
+    function clearCell(cell) {
+        const x = parseInt(cell.dataset.x);
+        const y = parseInt(cell.dataset.y);
+        const idx = shooters.findIndex(s => s.x === x && s.y === y);
+        if (idx !== -1) shooters.splice(idx, 1);
 
-            @keyframes hitN {
-                0% { background-color: #EDEAE6; }
-                50% { background-color: rgba(241, 73, 29, 0.2); } /* Orange for N */
-                100% { background-color: #EDEAE6; }
-            }
+        cell.textContent = '';
+        ['data-direction','data-speed','data-tone','data-oscillator',
+         'data-noisetype','data-deflect','data-gate','data-bulletCount',
+         'data-sample','data-splitter','title'].forEach(attr => cell.removeAttribute(attr));
 
-            @keyframes hitD {
-                0% { background-color: #EDEAE6; }
-                50% { background-color: rgba(241, 202, 29, 0.2); } /* Yellow for D */
-                100% { background-color: #EDEAE6; }
-            }
-
-            .hit-t {
-                animation: hitT 0.2s ease-out;
-            }
-
-            .hit-n {
-                animation: hitN 0.2s ease-out;
-            }
-
-            .hit-d {
-                animation: hitD 0.2s ease-out;
-            }
-        </style>
-    `);
-
-    // Modal functionality
-    const modal = document.getElementById('modal');
-    const infoButton = document.getElementById('info-button');
-    const closeButton = document.querySelector('.close');
-
-    infoButton.addEventListener('click', () => {
-        modal.style.display = 'block';
-    });
-
-    closeButton.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-
-    // Add CSS for audio object
-    document.head.insertAdjacentHTML('beforeend', `
-        <style>
-            .cell[data-sample] {
-                color: #F1CA1D;  /* Yellow for audio */
-            }
-
-            .cell[data-sample]::before {
-                content: attr(data-sample);
-                position: absolute;
-                top: 2px;
-                left: 2px;
-                font-size: 10px;
-                opacity: 0.9;
-                background-color: #F1CA1D;
-                color: #282727;
-                padding: 1px 3px;
-                border-radius: 2px;
-                cursor: pointer;
-                z-index: 2;
-            }
-
-            @keyframes hitA {
-                0% { background-color: #EDEAE6; }
-                50% { background-color: rgba(241, 202, 29, 0.2); }
-                100% { background-color: #EDEAE6; }
-            }
-
-            .hit-a {
-                animation: hitA 0.2s ease-out;
-            }
-        </style>
-    `);
-
-    // Add these functions to your code
-    function encodeGridState() {
-        let encodedState = [];
-        
-        // Add tempo information at the start
-        encodedState.push(`t${currentTempoIndex}`);
-        
-        const cells = document.querySelectorAll('.cell');
-        cells.forEach((cell, index) => {
-            if (cell.textContent) {
-                let cellCode = index.toString().padStart(3, '0'); // Changed to 3 digits
-                cellCode += cell.textContent; // Object type
-                
-                // Add specific object properties
-                switch (cell.textContent) {
-                    case 'T': // Trigger
-                        cellCode += cell.dataset.speed || 'n';
-                        cellCode += cell.dataset.direction || 'e';
-                        break;
-                    case 'M': // Melody
-                        cellCode += cell.dataset.oscillator || 'si';
-                        cellCode += cell.dataset.tone || 'C4';
-                        break;
-                    case 'N': // Noise
-                        cellCode += cell.dataset.noisetype || 'kd';
-                        break;
-                    case 'D': // Deflector
-                        cellCode += cell.dataset.deflect || 'e';
-                        break;
-                    case 'G': // Gate
-                        cellCode += cell.dataset.gate || '1';
-                        break;
-                    case 'S': // Sample
-                        cellCode += cell.dataset.sample || '01';
-                        break;
-                    case 'X': // Splitter
-                        cellCode += 'x';  // Just add a marker
-                        break;
-                }
-                encodedState.push(cellCode);
-            }
-        });
-        
-        return encodedState.join('-');
-    }
-
-    function decodeGridState(encodedState) {
-        clearGrid(); // Clear existing grid
-        
-        // Clear any existing projectiles
-        projectiles = [];
-        
-        const cellCodes = encodedState.split('-');
-        
-        // Handle tempo code if present
-        if (cellCodes[0].startsWith('t')) {
-            currentTempoIndex = parseInt(cellCodes[0].slice(1));
-            const newBPM = TEMPO_SETTINGS[currentTempoIndex].bpm;
-            MS_PER_BEAT = (60 * 1000) / newBPM;
-            
-            // Update tempo icon
-            const tempoButton = document.getElementById('tempo-button');
-            tempoButton.querySelector('img').src = TEMPO_SETTINGS[currentTempoIndex].icon;
-            
-            // Remove tempo code from array
-            cellCodes.shift();
-        }
-        
-        cellCodes.forEach(code => {
-            const position = parseInt(code.slice(0, 3));
-            const objectType = code[3];
-            const cell = document.querySelectorAll('.cell')[position];
-            
-            if (cell) {
-                cell.textContent = objectType;
-                
-                switch (objectType) {
-                    case 'T':
-                        const speed = code[4];
-                        const direction = code[5];
-                        cell.dataset.speed = speed;
-                        cell.dataset.direction = direction;
-                        shooters.push({
-                            x: position % GRID_SIZE,
-                            y: Math.floor(position / GRID_SIZE),
-                            direction: DIRECTIONS[direction],
-                            speedCode: speed
-                        });
-                        break;
-                    case 'M':
-                        const osc = code.slice(4, 6);
-                        const tone = code.slice(6);
-                        cell.dataset.oscillator = osc;
-                        cell.dataset.tone = tone;
-                        break;
-                    case 'N':
-                        const noiseType = code.slice(4);
-                        cell.dataset.noisetype = noiseType;
-                        break;
-                    case 'D':
-                        const deflectDir = code[4];
-                        cell.dataset.deflect = deflectDir;
-                        break;
-                    case 'G':
-                        const gateType = code[4];
-                        cell.dataset.gate = gateType;
-                        cell.dataset.bulletCount = '0';
-                        break;
-                    case 'S':
-                        const sample = code.slice(4);
-                        cell.dataset.sample = sample;
-                        break;
-                    case 'X':
-                        cell.dataset.splitter = 'x';
-                        break;
-                }
-            }
-        });
-
-        // Clear any bullet characters ('·') from cells
-        document.querySelectorAll('.cell').forEach(cell => {
-            if (cell.textContent === '·') {
-                cell.textContent = '';
-            }
-        });
+        cell.dataset.x = x;
+        cell.dataset.y = y;
     }
 
     function clearGrid() {
-        const cells = document.querySelectorAll('.cell');
-        cells.forEach(cell => clearCell(cell));
         shooters = [];
+        for (const cell of cells) {
+            cell.textContent = '';
+            ['data-direction','data-speed','data-tone','data-oscillator',
+             'data-noisetype','data-deflect','data-gate','data-bulletCount',
+             'data-sample','data-splitter','title'].forEach(attr => cell.removeAttribute(attr));
+        }
     }
 
-    // Update share button code
+    // --- Modals ---
+    const modal      = document.getElementById('modal');
+    const infoButton = document.getElementById('info-button');
+    infoButton.addEventListener('click', () => { modal.style.display = 'block'; });
+    modal.querySelector('.close').addEventListener('click', () => { modal.style.display = 'none'; });
+
+    const examplesModal = document.getElementById('examples-modal');
+    const openButton    = document.getElementById('open-button');
+    openButton.addEventListener('click', () => { examplesModal.style.display = 'block'; });
+    examplesModal.querySelector('.close').addEventListener('click', () => { examplesModal.style.display = 'none'; });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modal)         modal.style.display = 'none';
+        if (e.target === examplesModal) examplesModal.style.display = 'none';
+    });
+
+    document.querySelectorAll('.example-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const gridState = card.dataset.grid;
+            const newURL = `${window.location.origin}${window.location.pathname}?grid=${gridState}`;
+            window.history.replaceState({ grid: gridState }, '', newURL);
+            decodeGridState(gridState);
+            examplesModal.style.display = 'none';
+        });
+    });
+
+    // --- Share button ---
     document.querySelector('.controls').insertAdjacentHTML('beforeend', `
         <div id="share-button" class="control-button">
             <img src="share.svg" alt="Share" width="24" height="24">
         </div>
     `);
-
-    // Update share button click handler
     document.getElementById('share-button').addEventListener('click', () => {
-        // Just copy the current URL since it's always up to date
         navigator.clipboard.writeText(window.location.href).then(() => {
             alert('Share link copied to clipboard!');
         });
     });
 
-    // Check for shared state on load
-    window.addEventListener('load', () => {
-        const params = new URLSearchParams(window.location.search);
-        const gridState = params.get('grid');
-        if (gridState) {
-            decodeGridState(gridState);
-        }
-    });
-
-    // Set initial play state to true
-    isPlaying = true;
-    
-    // Start playing immediately
-    shootingInterval = setInterval(() => {
-        updateProjectiles();
-        shootFromShooters();
-    }, MS_PER_BEAT);
-    
-    // Set initial icon to stop
-    controlIcon.src = 'stop.svg';
-
-    // Add after other modal code
-    const examplesModal = document.getElementById('examples-modal');
-    const openButton = document.getElementById('open-button');
-
-    openButton.addEventListener('click', () => {
-        examplesModal.style.display = 'block';
-    });
-
-    // Add close button for examples modal
-    examplesModal.querySelector('.close').addEventListener('click', () => {
-        examplesModal.style.display = 'none';
-    });
-
-    // Handle example clicks
-    document.querySelectorAll('.example-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const gridState = card.dataset.grid;
-            // Update URL
-            const newURL = `${window.location.origin}${window.location.pathname}?grid=${gridState}`;
-            window.history.replaceState({ grid: gridState }, '', newURL);
-            // Load the example
-            decodeGridState(gridState);
-            // Close modal
-            examplesModal.style.display = 'none';
-        });
-    });
-
-    // Close examples modal when clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === examplesModal) {
-            examplesModal.style.display = 'none';
-        }
-    });
-
-    // Add this after other event listeners
+    // --- Tempo button ---
     document.getElementById('tempo-button').addEventListener('click', () => {
-        // Stop current interval
-        if (shootingInterval) {
-            clearInterval(shootingInterval);
-        }
-        
-        // Update tempo index
+        if (shootingInterval) clearInterval(shootingInterval);
         currentTempoIndex = (currentTempoIndex + 1) % TEMPO_SETTINGS.length;
-        
-        // Update tempo-related variables
-        const newBPM = TEMPO_SETTINGS[currentTempoIndex].bpm;
-        MS_PER_BEAT = (60 * 1000) / newBPM;
-        
-        // Update icon
-        const tempoButton = document.getElementById('tempo-button');
-        tempoButton.querySelector('img').src = TEMPO_SETTINGS[currentTempoIndex].icon;
-        
-        // Restart interval if playing
-        if (isPlaying) {
-            shootingInterval = setInterval(() => {
-                updateProjectiles();
-                shootFromShooters();
-            }, MS_PER_BEAT);
-        }
-        
-        // Update URL with new tempo
+        MS_PER_BEAT = (60 * 1000) / TEMPO_SETTINGS[currentTempoIndex].bpm;
+        document.getElementById('tempo-button').querySelector('img').src = TEMPO_SETTINGS[currentTempoIndex].icon;
+        if (isPlaying) startLoop();
         updateURL();
     });
+
+    // --- Load shared state on startup ---
+    window.addEventListener('load', () => {
+        const params    = new URLSearchParams(window.location.search);
+        const gridState = params.get('grid');
+        if (gridState) decodeGridState(gridState);
+    });
+
+    // --- Cell tooltip ---
+    const tooltip = document.createElement('div');
+    tooltip.id = 'cell-tooltip';
+    document.body.appendChild(tooltip);
+
+    const TOOLTIP_DATA = {
+        T: (cell) => ({
+            title: 'T  Trigger',
+            color: '#F1491D',
+            desc: 'Shoots bullets on each beat',
+            left:  { label: 'speed ◂',     value: cell.dataset.speed     || 'n',  map: { ss: 'very slow', s: 'slow', n: 'normal', f: 'fast', ff: 'very fast' } },
+            right: { label: 'direction ▸', value: cell.dataset.direction || 'e',  map: { n: 'north', e: 'east', s: 'south', w: 'west' } },
+            hint: 'click top-left / top-right to cycle'
+        }),
+        M: (cell) => ({
+            title: 'M  Melody',
+            color: '#561DF1',
+            desc: 'Plays a note when hit by bullet',
+            left:  { label: 'wave ◂', value: cell.dataset.oscillator || 'si', map: { si: 'sine', sq: 'square', tr: 'triangle', st: 'sawtooth' } },
+            right: { label: 'note ▸', value: cell.dataset.tone || 'C4' },
+            hint: 'click top-left / top-right to cycle'
+        }),
+        N: (cell) => ({
+            title: 'N  Noise',
+            color: '#F1491D',
+            desc: 'Plays a drum sound when hit',
+            left: { label: 'drum ◂', value: cell.dataset.noisetype || 'kd', map: { kd: 'kick', sn: 'snare', hh: 'hi-hat', tm: 'tom' } },
+            hint: 'click top-left to cycle'
+        }),
+        D: (cell) => ({
+            title: 'D  Deflector',
+            color: '#F1CA1D',
+            desc: 'Redirects incoming bullets',
+            right: { label: 'direction ▸', value: cell.dataset.deflect || 'e', map: { n: 'north', e: 'east', s: 'south', w: 'west' } },
+            hint: 'click top-right to cycle'
+        }),
+        G: (cell) => ({
+            title: 'G  Gate',
+            color: '#561DF1',
+            desc: 'Filters bullet passage',
+            left: { label: 'mode ◂', value: cell.dataset.gate || '1', map: { '1': 'every', '2': 'every 2nd', '3': 'every 3rd', '4': 'every 4th', r: 'random 50%' } },
+            hint: 'click top-left to cycle'
+        }),
+        S: (cell) => ({
+            title: 'S  Sample',
+            color: '#F1CA1D',
+            desc: 'Plays audio sample when hit',
+            left: { label: 'sample ◂', value: cell.dataset.sample || '01' },
+            hint: 'click top-left to cycle'
+        }),
+        X: () => ({
+            title: 'X  Splitter',
+            color: '#561DF1',
+            desc: 'Splits bullet into two perpendicular',
+            hint: 'no settings'
+        })
+    };
+
+    function buildTooltip(cell) {
+        const fn = TOOLTIP_DATA[cell.textContent];
+        if (!fn) return null;
+        const d = fn(cell);
+
+        const resolve = (item) => item.map ? `${item.value} — ${item.map[item.value] || item.value}` : item.value;
+
+        let html = `<div class="tt-title" style="color:${d.color}">${d.title}</div>`;
+        html += `<div class="tt-desc">${d.desc}</div>`;
+
+        if (d.left || d.right) {
+            html += '<div class="tt-settings">';
+            if (d.left)  html += `<div class="tt-item"><span class="tt-label">${d.left.label}</span><span class="tt-value">${resolve(d.left)}</span></div>`;
+            if (d.right) html += `<div class="tt-item"><span class="tt-label">${d.right.label}</span><span class="tt-value">${resolve(d.right)}</span></div>`;
+            html += '</div>';
+        }
+
+        if (d.hint) html += `<div class="tt-hint">${d.hint}</div>`;
+        return html;
+    }
+
+    function positionTooltip(mouseX, mouseY) {
+        const offset = 14;
+        const tw = tooltip.offsetWidth;
+        const th = tooltip.offsetHeight;
+        let x = mouseX + offset;
+        let y = mouseY + offset;
+        if (x + tw > window.innerWidth  - 8) x = mouseX - tw - offset;
+        if (y + th > window.innerHeight - 8) y = mouseY - th - offset;
+        tooltip.style.left = x + 'px';
+        tooltip.style.top  = y + 'px';
+    }
+
+    let tooltipTarget = null;
+
+    grid.addEventListener('mouseover', (e) => {
+        const cell = e.target.closest('.cell');
+        if (!cell || !cell.textContent || cell.textContent === '·') {
+            tooltip.classList.remove('visible');
+            tooltipTarget = null;
+            return;
+        }
+        if (cell === tooltipTarget) return;
+        const html = buildTooltip(cell);
+        if (!html) { tooltip.classList.remove('visible'); tooltipTarget = null; return; }
+        tooltipTarget = cell;
+        tooltip.innerHTML = html;
+        tooltip.classList.add('visible');
+    });
+
+    grid.addEventListener('mouseout', (e) => {
+        if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('#grid')) {
+            tooltip.classList.remove('visible');
+            tooltipTarget = null;
+        }
+    });
+
+    grid.addEventListener('mousemove', (e) => {
+        if (tooltip.classList.contains('visible')) positionTooltip(e.clientX, e.clientY);
+    });
+
+    // --- Start ---
+    isPlaying = true;
+    startLoop();
+    controlIcon.src = 'stop.svg';
 });
