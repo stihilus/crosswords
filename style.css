@@ -464,6 +464,75 @@ body {
     animation: hitA 0.2s ease-out;
 }
 
+/* Cell popup (copy / paste / delete) */
+#cell-popup {
+    position: fixed;
+    z-index: 250;
+    display: none;
+    background: #282727;
+    padding: 3px;
+    gap: 2px;
+}
+
+#cell-popup.visible {
+    display: flex;
+}
+
+.popup-btn {
+    background: none;
+    border: none;
+    color: #EDEAE6;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 5px 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1;
+}
+
+.popup-btn:hover {
+    background: rgba(237, 234, 230, 0.12);
+}
+
+.popup-btn.danger:hover {
+    color: #F1491D;
+    background: rgba(241, 73, 29, 0.15);
+}
+
+.popup-btn.accent:hover {
+    color: #561DF1;
+    background: rgba(86, 29, 241, 0.15);
+}
+
+/* Drag and drop */
+.cell.dragging {
+    opacity: 0.25;
+}
+
+.cell.drop-target {
+    background-color: rgba(241, 73, 29, 0.15);
+    outline: 2px dashed rgba(241, 73, 29, 0.5);
+    outline-offset: -2px;
+}
+
+#drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 300;
+    background-color: #EDEAE6;
+    border: 2px solid #F1491D;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Space Mono', monospace;
+    width: var(--cell-size);
+    height: var(--cell-size);
+    font-size: calc(var(--cell-size) * 0.5);
+    transform: translate(-50%, -50%);
+    opacity: 0.92;
+}
+
 /* Cell tooltip */
 #cell-tooltip {
     position: fixed;

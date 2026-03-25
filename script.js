@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Click handler ---
     grid.addEventListener('click', async (e) => {
+        if (skipNextClick) { skipNextClick = false; return; }
         if (!e.target.classList.contains('cell')) return;
 
         if (Tone.context.state !== 'running') {
@@ -239,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectedCell) selectedCell.classList.remove('selected');
             selectedCell = cell;
             selectedCell.classList.add('selected');
+            showCellPopup(cell);
         }
 
         if (isLeftCornerClick || isRightCornerClick) {
@@ -530,6 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         selectedCell.classList.remove('selected');
         selectedCell = null;
+        hideCellPopup();
         updateURL();
     });
 
@@ -623,6 +626,218 @@ document.addEventListener('DOMContentLoaded', () => {
         const gridState = params.get('grid');
         if (gridState) decodeGridState(gridState);
     });
+
+    // --- Clipboard + popup ---
+    let clipboard = null;
+    const CELL_ATTRS = ['direction', 'speed', 'tone', 'oscillator',
+                        'noisetype', 'deflect', 'gate', 'sample', 'splitter'];
+
+    const cellPopup = document.createElement('div');
+    cellPopup.id = 'cell-popup';
+    document.body.appendChild(cellPopup);
+
+    function makePopupBtn(label, variant, onClick) {
+        const btn = document.createElement('button');
+        btn.className = 'popup-btn' + (variant ? ' ' + variant : '');
+        btn.textContent = label;
+        btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+        return btn;
+    }
+
+    function copyCellData(cell) {
+        clipboard = { textContent: cell.textContent, title: cell.title || '' };
+        for (const attr of CELL_ATTRS) {
+            if (cell.dataset[attr] !== undefined) clipboard[attr] = cell.dataset[attr];
+        }
+    }
+
+    function pasteCellData(cell) {
+        if (!clipboard) return;
+        if (cell.textContent && cell.textContent !== '·') clearCell(cell);
+        cell.textContent = clipboard.textContent;
+        if (clipboard.title) cell.title = clipboard.title;
+        for (const attr of CELL_ATTRS) {
+            if (clipboard[attr] !== undefined) cell.dataset[attr] = clipboard[attr];
+        }
+        if (clipboard.textContent === 'G') cell.dataset.bulletCount = '0';
+        if (clipboard.textContent === 'T') {
+            shooters.push({
+                x: parseInt(cell.dataset.x),
+                y: parseInt(cell.dataset.y),
+                direction: DIRECTIONS[clipboard.direction || 'e'],
+                speedCode: clipboard.speed || 'n'
+            });
+        }
+        updateURL();
+    }
+
+    function showCellPopup(cell) {
+        const hasContent = cell.textContent && cell.textContent !== '·';
+        cellPopup.innerHTML = '';
+
+        if (hasContent) {
+            cellPopup.appendChild(makePopupBtn('copy', null, () => {
+                copyCellData(cell);
+                hideCellPopup();
+            }));
+            cellPopup.appendChild(makePopupBtn('del', 'danger', () => {
+                clearCell(cell);
+                updateURL();
+                hideCellPopup();
+            }));
+        } else if (clipboard) {
+            cellPopup.appendChild(makePopupBtn('paste', 'accent', () => {
+                pasteCellData(cell);
+                hideCellPopup();
+            }));
+        } else {
+            return;
+        }
+
+        // Measure then position above the cell (flip below if near top)
+        cellPopup.style.visibility = 'hidden';
+        cellPopup.classList.add('visible');
+        const pw = cellPopup.offsetWidth;
+        const ph = cellPopup.offsetHeight;
+        const rect = cell.getBoundingClientRect();
+        let x = rect.left + rect.width / 2 - pw / 2;
+        let y = rect.top - ph - 6;
+        x = Math.max(4, Math.min(x, window.innerWidth - pw - 4));
+        if (y < 4) y = rect.bottom + 6;
+        cellPopup.style.left = x + 'px';
+        cellPopup.style.top  = y + 'px';
+        cellPopup.style.visibility = '';
+    }
+
+    function hideCellPopup() {
+        cellPopup.classList.remove('visible');
+    }
+
+    // Dismiss popup when clicking outside of it
+    document.addEventListener('mousedown', (e) => {
+        if (!cellPopup.contains(e.target)) hideCellPopup();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'c') {
+            if (!selectedCell || !selectedCell.textContent || selectedCell.textContent === '·') return;
+            e.preventDefault();
+            copyCellData(selectedCell);
+            hideCellPopup();
+        } else if (e.ctrlKey && e.key === 'v') {
+            if (!selectedCell || !clipboard) return;
+            e.preventDefault();
+            pasteCellData(selectedCell);
+            hideCellPopup();
+        } else if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (!selectedCell || !selectedCell.textContent || selectedCell.textContent === '·') return;
+            // Don't intercept Backspace in text inputs (modals)
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            e.preventDefault();
+            clearCell(selectedCell);
+            updateURL();
+            hideCellPopup();
+        }
+    });
+
+    // --- Drag and drop ---
+    const DRAG_THRESHOLD = 6;
+    let dragState = null;
+    let skipNextClick = false;
+
+    const ghost = document.createElement('div');
+    ghost.id = 'drag-ghost';
+    document.body.appendChild(ghost);
+
+    grid.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        const cell = e.target.closest('.cell');
+        if (!cell || !cell.textContent || cell.textContent === '·') return;
+        dragState = { cell, startX: e.clientX, startY: e.clientY, active: false, dropTarget: null };
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!dragState) return;
+        const dx = e.clientX - dragState.startX;
+        const dy = e.clientY - dragState.startY;
+
+        if (!dragState.active && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+            dragState.active = true;
+            ghost.textContent = dragState.cell.textContent;
+            ghost.style.color = getComputedStyle(dragState.cell).color;
+            ghost.style.display = 'flex';
+            dragState.cell.classList.add('dragging');
+            hideCellPopup();
+            tooltip.classList.remove('visible');
+            tooltipTarget = null;
+        }
+
+        if (!dragState.active) return;
+
+        ghost.style.left = e.clientX + 'px';
+        ghost.style.top  = e.clientY + 'px';
+
+        // Find cell under cursor without ghost blocking hit-test
+        ghost.style.display = 'none';
+        const under = document.elementFromPoint(e.clientX, e.clientY);
+        ghost.style.display = 'flex';
+
+        const over = under?.closest('.cell');
+
+        if (dragState.dropTarget && dragState.dropTarget !== over) {
+            dragState.dropTarget.classList.remove('drop-target');
+            dragState.dropTarget = null;
+        }
+        if (over && over !== dragState.cell && !over.textContent) {
+            over.classList.add('drop-target');
+            dragState.dropTarget = over;
+        }
+    });
+
+    document.addEventListener('mouseup', (e) => {
+        if (!dragState) return;
+
+        if (dragState.active) {
+            skipNextClick = true;
+            ghost.style.display = 'none';
+            dragState.cell.classList.remove('dragging');
+
+            if (dragState.dropTarget) {
+                dragState.dropTarget.classList.remove('drop-target');
+                moveCellTo(dragState.cell, dragState.dropTarget);
+            }
+
+            // Clean up any stray highlights
+            grid.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+        }
+
+        dragState = null;
+    });
+
+    function moveCellTo(from, to) {
+        to.textContent = from.textContent;
+        if (from.title) to.title = from.title;
+
+        const attrs = ['direction', 'speed', 'tone', 'oscillator',
+                       'noisetype', 'deflect', 'gate', 'bulletCount',
+                       'sample', 'splitter'];
+        for (const attr of attrs) {
+            if (from.dataset[attr] !== undefined) to.dataset[attr] = from.dataset[attr];
+        }
+
+        // Update shooters array if this is a T cell
+        if (from.textContent === 'T') {
+            const shooter = shooters.find(s => s.x === parseInt(from.dataset.x) && s.y === parseInt(from.dataset.y));
+            if (shooter) {
+                shooter.x = parseInt(to.dataset.x);
+                shooter.y = parseInt(to.dataset.y);
+            }
+        }
+
+        clearCell(from);
+        updateURL();
+    }
 
     // --- Cell tooltip ---
     const tooltip = document.createElement('div');
