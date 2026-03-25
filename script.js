@@ -665,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('busy-toggle').addEventListener('click', () => {
         cells.forEach(cell => cell.classList.remove('busy'));
         cells.forEach(cell => {
-            if (!cell.textContent && Math.random() < 0.25) {
+            if (!cell.textContent && Math.random() < 0.10) {
                 cell.classList.add('busy');
             }
         });
