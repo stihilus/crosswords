@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('grid');
     let GRID_SIZE = 15;
     let selectedCell = null;
-    let busyMode = false;
     const TEMPO_SETTINGS = [
         { bpm: 100, icon: 'tempo1.svg' },
         { bpm: 110, icon: 'tempo2.svg' },
@@ -130,18 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
     grid.addEventListener('click', async (e) => {
         if (skipNextClick) { skipNextClick = false; return; }
         if (!e.target.classList.contains('cell')) return;
-
-        // Busy mode: toggle busy on empty/busy cells only
-        if (busyMode) {
-            const cell = e.target;
-            if (cell.classList.contains('busy')) {
-                cell.classList.remove('busy');
-            } else if (!cell.textContent || cell.textContent === '·') {
-                cell.classList.add('busy');
-            }
-            updateURL();
-            return;
-        }
 
         if (Tone.context.state !== 'running') {
             await Tone.start();
@@ -674,19 +661,16 @@ document.addEventListener('DOMContentLoaded', () => {
         updateURL();
     });
 
-    // --- Settings: busy cells toggle ---
-    const busyToggleBtn = document.getElementById('busy-toggle');
-    busyToggleBtn.addEventListener('click', () => {
-        busyMode = !busyMode;
-        busyToggleBtn.textContent = `Busy mode: ${busyMode ? 'on' : 'off'}`;
-        busyToggleBtn.classList.toggle('active', busyMode);
-        document.body.classList.toggle('busy-mode', busyMode);
+    // --- Settings: busy cells random fill ---
+    document.getElementById('busy-toggle').addEventListener('click', () => {
+        cells.forEach(cell => cell.classList.remove('busy'));
+        cells.forEach(cell => {
+            if (!cell.textContent && Math.random() < 0.25) {
+                cell.classList.add('busy');
+            }
+        });
+        updateURL();
     });
-
-    const busyIndicator = document.createElement('div');
-    busyIndicator.id = 'busy-indicator';
-    busyIndicator.textContent = 'busy mode';
-    document.body.appendChild(busyIndicator);
 
     document.querySelectorAll('.example-card').forEach(card => {
         card.addEventListener('click', () => {

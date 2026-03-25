@@ -634,31 +634,6 @@ body {
     cursor: default;
 }
 
-body.busy-mode .cell {
-    cursor: crosshair;
-}
-
-body.busy-mode .cell.busy {
-    cursor: pointer;
-}
-
-#busy-indicator {
-    position: fixed;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: #F1491D;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    pointer-events: none;
-    display: none;
-}
-
-body.busy-mode #busy-indicator {
-    display: block;
-}
 
 /* Grid size selector */
 .size-selector {
