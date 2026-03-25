@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('grid');
-    let GRID_SIZE = 15;
+    let GRID_SIZE = 8;
     let selectedCell = null;
     const TEMPO_SETTINGS = [
         { bpm: 100, icon: 'tempo1.svg' },
@@ -137,6 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let y = 0; y < GRID_SIZE; y++) {
         cellGrid[y] = cells.slice(y * GRID_SIZE, y * GRID_SIZE + GRID_SIZE);
     }
+
+    // Seed default random walls
+    cells.forEach(cell => {
+        if (Math.random() < 0.10) cell.classList.add('busy');
+    });
 
     function getCellAt(x, y) {
         if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return null;
