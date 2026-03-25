@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('grid');
-    const GRID_SIZE = 15;
+    let GRID_SIZE = 15;
     let selectedCell = null;
+    let busyMode = false;
     const TEMPO_SETTINGS = [
         { bpm: 100, icon: 'tempo1.svg' },
         { bpm: 110, icon: 'tempo2.svg' },
@@ -129,6 +130,18 @@ document.addEventListener('DOMContentLoaded', () => {
     grid.addEventListener('click', async (e) => {
         if (skipNextClick) { skipNextClick = false; return; }
         if (!e.target.classList.contains('cell')) return;
+
+        // Busy mode: toggle busy on empty/busy cells only
+        if (busyMode) {
+            const cell = e.target;
+            if (cell.classList.contains('busy')) {
+                cell.classList.remove('busy');
+            } else if (!cell.textContent || cell.textContent === '·') {
+                cell.classList.add('busy');
+            }
+            updateURL();
+            return;
+        }
 
         if (Tone.context.state !== 'running') {
             await Tone.start();
@@ -294,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const newCell = getCellAt(projectile.x, projectile.y);
             if (!newCell) return false; // out of bounds
+            if (newCell.classList.contains('busy')) return false; // wall
 
             // Handle gate
             if (newCell.textContent === 'G') {
@@ -411,10 +425,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function encodeGridState() {
-        const parts = [`t${currentTempoIndex}`];
+        const parts = [`t${currentTempoIndex}`, `g${GRID_SIZE}`];
         cells.forEach((cell, index) => {
-            if (!cell.textContent) return;
-            let code = index.toString().padStart(3, '0') + cell.textContent;
+            const isBusy = cell.classList.contains('busy');
+            if (!cell.textContent && !isBusy) return;
+            const pos = index.toString().padStart(3, '0');
+            if (isBusy) { parts.push(pos + 'W'); return; }
+            let code = pos + cell.textContent;
             switch (cell.textContent) {
                 case 'T': code += (cell.dataset.speed || 'n') + (cell.dataset.direction || 'e'); break;
                 case 'M': code += (cell.dataset.oscillator || 'si') + (cell.dataset.tone || 'C4'); break;
@@ -430,9 +447,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function decodeGridState(encodedState) {
-        clearGrid();
-        projectiles = [];
-
         const cellCodes = encodedState.split('-');
 
         if (cellCodes[0].startsWith('t')) {
@@ -442,12 +456,27 @@ document.addEventListener('DOMContentLoaded', () => {
             cellCodes.shift();
         }
 
-        for (const code of cellCodes) {
-            const position   = parseInt(code.slice(0, 3));
-            const objectType = code[3];
-            const cell       = cells[position];
-            if (!cell) continue;
+        if (cellCodes[0] && cellCodes[0].startsWith('g')) {
+            const newSize = parseInt(cellCodes[0].slice(1));
+            if (newSize >= 6 && newSize <= 16 && newSize !== GRID_SIZE) {
+                rebuildGrid(newSize);
+                document.querySelectorAll('.size-btn[data-size]').forEach(b =>
+                    b.classList.toggle('active', parseInt(b.dataset.size) === GRID_SIZE)
+                );
+            }
+            cellCodes.shift();
+        }
 
+        clearGrid();
+        projectiles = [];
+
+        for (const code of cellCodes) {
+            const position  = parseInt(code.slice(0, 3));
+            const cell      = cells[position];
+            if (!cell) continue;
+            if (code[3] === 'W') { cell.classList.add('busy'); continue; }
+
+            const objectType = code[3];
             cell.textContent = objectType;
 
             switch (objectType) {
@@ -493,6 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Keyboard input ---
     document.addEventListener('keypress', (e) => {
         if (!selectedCell) return;
+        if (selectedCell.classList.contains('busy')) return;
         const char = String.fromCharCode(e.keyCode).toUpperCase();
 
         if (char === 'T') {
@@ -554,6 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (idx !== -1) shooters.splice(idx, 1);
 
         cell.textContent = '';
+        cell.classList.remove('busy');
         ['data-direction','data-speed','data-tone','data-oscillator',
          'data-noisetype','data-deflect','data-gate','data-bulletCount',
          'data-sample','data-splitter','title'].forEach(attr => cell.removeAttribute(attr));
@@ -566,10 +597,36 @@ document.addEventListener('DOMContentLoaded', () => {
         shooters = [];
         for (const cell of cells) {
             cell.textContent = '';
+            cell.classList.remove('busy');
             ['data-direction','data-speed','data-tone','data-oscillator',
              'data-noisetype','data-deflect','data-gate','data-bulletCount',
              'data-sample','data-splitter','title'].forEach(attr => cell.removeAttribute(attr));
         }
+    }
+
+    function rebuildGrid(newSize) {
+        GRID_SIZE = newSize;
+        document.documentElement.style.setProperty(
+            '--cell-size',
+            `min(48px, calc((min(100vw, 100vh) - 120px) / ${GRID_SIZE}))`
+        );
+        grid.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
+        grid.innerHTML = '';
+        for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.x = i % GRID_SIZE;
+            cell.dataset.y = Math.floor(i / GRID_SIZE);
+            grid.appendChild(cell);
+        }
+        cells.splice(0, cells.length, ...grid.querySelectorAll('.cell'));
+        cellGrid.splice(0);
+        for (let y = 0; y < GRID_SIZE; y++) {
+            cellGrid[y] = cells.slice(y * GRID_SIZE, y * GRID_SIZE + GRID_SIZE);
+        }
+        shooters = [];
+        projectiles = [];
+        beatCount = 0;
     }
 
     // --- Modals ---
@@ -583,10 +640,53 @@ document.addEventListener('DOMContentLoaded', () => {
     openButton.addEventListener('click', () => { examplesModal.style.display = 'block'; });
     examplesModal.querySelector('.close').addEventListener('click', () => { examplesModal.style.display = 'none'; });
 
+    const settingsModal = document.getElementById('settings-modal');
+    document.getElementById('settings-button').addEventListener('click', () => { settingsModal.style.display = 'block'; });
+    settingsModal.querySelector('.close').addEventListener('click', () => { settingsModal.style.display = 'none'; });
+
     window.addEventListener('click', (e) => {
         if (e.target === modal)         modal.style.display = 'none';
         if (e.target === examplesModal) examplesModal.style.display = 'none';
+        if (e.target === settingsModal) settingsModal.style.display = 'none';
     });
+
+    // --- Settings: grid size buttons ---
+    const sizeSelector = document.querySelector('.size-selector');
+    for (let s = 6; s <= 16; s++) {
+        const btn = document.createElement('button');
+        btn.className = 'size-btn' + (s === GRID_SIZE ? ' active' : '');
+        btn.textContent = s;
+        btn.dataset.size = s;
+        sizeSelector.appendChild(btn);
+    }
+    sizeSelector.addEventListener('click', (e) => {
+        const btn = e.target.closest('.size-btn[data-size]');
+        if (!btn) return;
+        const s = parseInt(btn.dataset.size);
+        if (s === GRID_SIZE) return;
+        const wasPlaying = isPlaying;
+        if (wasPlaying) clearInterval(shootingInterval);
+        rebuildGrid(s);
+        document.querySelectorAll('.size-btn[data-size]').forEach(b =>
+            b.classList.toggle('active', parseInt(b.dataset.size) === GRID_SIZE)
+        );
+        if (wasPlaying) startLoop();
+        updateURL();
+    });
+
+    // --- Settings: busy cells toggle ---
+    const busyToggleBtn = document.getElementById('busy-toggle');
+    busyToggleBtn.addEventListener('click', () => {
+        busyMode = !busyMode;
+        busyToggleBtn.textContent = `Busy mode: ${busyMode ? 'on' : 'off'}`;
+        busyToggleBtn.classList.toggle('active', busyMode);
+        document.body.classList.toggle('busy-mode', busyMode);
+    });
+
+    const busyIndicator = document.createElement('div');
+    busyIndicator.id = 'busy-indicator';
+    busyIndicator.textContent = 'busy mode';
+    document.body.appendChild(busyIndicator);
 
     document.querySelectorAll('.example-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -789,7 +889,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dragState.dropTarget.classList.remove('drop-target');
             dragState.dropTarget = null;
         }
-        if (over && over !== dragState.cell && !over.textContent) {
+        if (over && over !== dragState.cell && !over.textContent && !over.classList.contains('busy')) {
             over.classList.add('drop-target');
             dragState.dropTarget = over;
         }

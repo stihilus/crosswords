@@ -321,7 +321,8 @@ body {
 }
 
 .object-card {
-    background: white;
+    background: #EDEAE6;
+    border: 1px solid rgba(40, 39, 39, 0.15);
     padding: 15px;
     margin-bottom: 15px;
     border-radius: 0;
@@ -469,7 +470,8 @@ body {
     position: fixed;
     z-index: 250;
     display: none;
-    background: #282727;
+    background: #EDEAE6;
+    border: 1px solid rgba(40, 39, 39, 0.2);
     padding: 3px;
     gap: 2px;
 }
@@ -481,7 +483,7 @@ body {
 .popup-btn {
     background: none;
     border: none;
-    color: #EDEAE6;
+    color: #282727;
     font-family: 'Space Mono', monospace;
     font-size: 10px;
     padding: 5px 10px;
@@ -492,7 +494,7 @@ body {
 }
 
 .popup-btn:hover {
-    background: rgba(237, 234, 230, 0.12);
+    background: rgba(40, 39, 39, 0.08);
 }
 
 .popup-btn.danger:hover {
@@ -537,8 +539,9 @@ body {
 #cell-tooltip {
     position: fixed;
     z-index: 200;
-    background: #282727;
-    color: #EDEAE6;
+    background: #EDEAE6;
+    color: #282727;
+    border: 1px solid rgba(40, 39, 39, 0.2);
     font-family: 'Space Mono', monospace;
     font-size: 11px;
     padding: 10px 12px;
@@ -571,7 +574,7 @@ body {
 .tt-settings {
     display: flex;
     gap: 12px;
-    border-top: 1px solid rgba(237, 234, 230, 0.15);
+    border-top: 1px solid rgba(40, 39, 39, 0.15);
     padding-top: 7px;
 }
 
@@ -602,7 +605,7 @@ body {
     font-size: 9px;
     opacity: 0.35;
     margin-top: 6px;
-    border-top: 1px solid rgba(237, 234, 230, 0.1);
+    border-top: 1px solid rgba(40, 39, 39, 0.1);
     padding-top: 5px;
 }
 
@@ -625,8 +628,71 @@ body {
     text-decoration: underline;
 }
 
+/* Busy cells */
+.cell.busy {
+    background-color: #282727;
+    cursor: default;
+}
+
+body.busy-mode .cell {
+    cursor: crosshair;
+}
+
+body.busy-mode .cell.busy {
+    cursor: pointer;
+}
+
+#busy-indicator {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: #F1491D;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    pointer-events: none;
+    display: none;
+}
+
+body.busy-mode #busy-indicator {
+    display: block;
+}
+
+/* Grid size selector */
+.size-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 10px;
+}
+
+.size-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 5px 9px;
+    border: 1px solid rgba(40, 39, 39, 0.2);
+    background: none;
+    cursor: pointer;
+    color: #282727;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1;
+}
+
+.size-btn:hover {
+    background: rgba(40, 39, 39, 0.08);
+}
+
+.size-btn.active {
+    background: #282727;
+    color: #EDEAE6;
+}
+
 .example-card {
-    background: white;
+    background: #EDEAE6;
+    border: 1px solid rgba(40, 39, 39, 0.15);
     padding: 15px;
     margin-bottom: 15px;
     cursor: pointer;
