@@ -118,11 +118,6 @@ body {
 
 .cell[data-tone] {
     color: #561DF1;
-    background-color: #C4B3E9;
-}
-
-.cell[data-speed] {
-    background-color: #EEBFB0;
 }
 
 /* Style for bullets */
@@ -147,7 +142,6 @@ body {
 
 .cell[data-noisetype] {
     color: #F1491D;
-    background-color: #EEBFB0;
 }
 
 .cell[data-noisetype]::before:hover {
@@ -176,7 +170,6 @@ body {
 /* Add styles for deflector */
 .cell[data-deflect] {
     color: #F1CA1D;
-    background-color: #EEE1B0;
 }
 
 .cell[data-deflect]::after {
@@ -201,21 +194,21 @@ body {
 
 /* Add these animation definitions */
 @keyframes hitT {
-    0% { background-color: #EEBFB0; }
-    50% { background-color: rgba(241, 73, 29, 0.4); }
-    100% { background-color: #EEBFB0; }
+    0% { background-color: #EDEAE6; }
+    50% { background-color: #EEBFB0; }
+    100% { background-color: #EDEAE6; }
 }
 
 @keyframes hitN {
-    0% { background-color: #EEBFB0; }
-    50% { background-color: rgba(241, 73, 29, 0.5); }
-    100% { background-color: #EEBFB0; }
+    0% { background-color: #EDEAE6; }
+    50% { background-color: #EEBFB0; }
+    100% { background-color: #EDEAE6; }
 }
 
 @keyframes hitD {
-    0% { background-color: #EEE1B0; }
-    50% { background-color: rgba(241, 202, 29, 0.6); }
-    100% { background-color: #EEE1B0; }
+    0% { background-color: #EDEAE6; }
+    50% { background-color: #EEE1B0; }
+    100% { background-color: #EDEAE6; }
 }
 
 .hit-t {
@@ -233,7 +226,6 @@ body {
 /* Add styles for gate */
 .cell[data-gate] {
     color: #561DF1;
-    background-color: #C4B3E9;
 }
 
 .cell[data-gate]::before {
@@ -396,9 +388,9 @@ body {
 
 /* Shooting animation */
 @keyframes shoot {
-    0% { background-color: #EEBFB0; }
-    50% { background-color: rgba(241, 73, 29, 0.5); }
-    100% { background-color: #EEBFB0; }
+    0% { background-color: #EDEAE6; }
+    50% { background-color: #EEBFB0; }
+    100% { background-color: #EDEAE6; }
 }
 
 .shooting {
@@ -409,7 +401,6 @@ body {
 /* Sample object styles */
 .cell[data-sample] {
     color: #F1CA1D;
-    background-color: #EEE1B0;
 }
 
 .cell[data-sample]::before {
@@ -452,13 +443,12 @@ body {
 /* Add styles for splitter */
 .cell[data-splitter] {
     color: #561DF1;
-    background-color: #C4B3E9;
 }
 
 @keyframes hitX {
-    0% { background-color: #C4B3E9; }
-    50% { background-color: rgba(86, 29, 241, 0.5); }
-    100% { background-color: #C4B3E9; }
+    0% { background-color: #EDEAE6; }
+    50% { background-color: #C4B3E9; }
+    100% { background-color: #EDEAE6; }
 }
 
 .hit-x {
@@ -466,9 +456,9 @@ body {
 }
 
 @keyframes hitA {
-    0%   { background-color: #EEE1B0; }
-    50%  { background-color: rgba(241, 202, 29, 0.6); }
-    100% { background-color: #EEE1B0; }
+    0%   { background-color: #EDEAE6; }
+    50%  { background-color: #EEE1B0; }
+    100% { background-color: #EDEAE6; }
 }
 
 .hit-a {
