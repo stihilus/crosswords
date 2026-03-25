@@ -77,25 +77,49 @@ document.addEventListener('DOMContentLoaded', () => {
         { code: '03', file: '03.wav' }
     ];
 
+    // --- Global FX sends (parallel reverb + delay) ---
+    const reverb = new Tone.Reverb({ decay: 2.5 });
+    reverb.wet.value = 1;
+    reverb.toDestination();
+
+    const delay = new Tone.FeedbackDelay({ delayTime: 0.3, feedback: 0.35 });
+    delay.wet.value = 1;
+    delay.toDestination();
+
+    const reverbSend = new Tone.Gain(0);
+    reverbSend.connect(reverb);
+    const delaySend = new Tone.Gain(0);
+    delaySend.connect(delay);
+
     const audioPlayers = AUDIO_SAMPLES.map(sample => {
         const player = new Tone.Player({
             url: `samples/${sample.file}`,
             onload: () => console.log(`Loaded ${sample.file}`),
         }).toDestination();
+        player.connect(reverbSend);
+        player.connect(delaySend);
         return { code: sample.code, player };
     });
 
     function createSynth() {
-        return new Tone.Synth({
+        const synth = new Tone.Synth({
             oscillator: { type: 'sine' },
             envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.1 }
         }).toDestination();
+        synth.connect(reverbSend);
+        synth.connect(delaySend);
+        return synth;
     }
 
     const synthPool = Array(5).fill(null).map(() => createSynth());
     let currentSynthIndex = 0;
 
-    const noiseSynthPool = Array(5).fill(null).map(() => new Tone.NoiseSynth().toDestination());
+    const noiseSynthPool = Array(5).fill(null).map(() => {
+        const s = new Tone.NoiseSynth().toDestination();
+        s.connect(reverbSend);
+        s.connect(delaySend);
+        return s;
+    });
     let currentNoiseSynthIndex = 0;
 
     // --- Build grid cells and a fast 2D cache ---
@@ -670,6 +694,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         updateURL();
+    });
+
+    // --- Settings: effects toggles ---
+    let reverbOn = false;
+    const reverbToggle = document.getElementById('reverb-toggle');
+    reverbToggle.addEventListener('click', () => {
+        reverbOn = !reverbOn;
+        reverbSend.gain.rampTo(reverbOn ? 0.5 : 0, 0.2);
+        reverbToggle.textContent = `Reverb: ${reverbOn ? 'on' : 'off'}`;
+        reverbToggle.classList.toggle('active', reverbOn);
+    });
+
+    let delayOn = false;
+    const delayToggle = document.getElementById('delay-toggle');
+    delayToggle.addEventListener('click', () => {
+        delayOn = !delayOn;
+        delaySend.gain.rampTo(delayOn ? 0.45 : 0, 0.2);
+        delayToggle.textContent = `Delay: ${delayOn ? 'on' : 'off'}`;
+        delayToggle.classList.toggle('active', delayOn);
     });
 
     document.querySelectorAll('.example-card').forEach(card => {
