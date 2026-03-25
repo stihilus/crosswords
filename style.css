@@ -46,7 +46,7 @@ body {
 }
 
 .cell.selected {
-    background-color: rgba(241, 73, 29, 0.2); /* F1491D with opacity */
+    background-color: #EEBFB0;
 }
 
 .cell[data-tone]::after {
@@ -117,7 +117,12 @@ body {
 }
 
 .cell[data-tone] {
-    color: #561DF1; /* T characters in purple */
+    color: #561DF1;
+    background-color: #C4B3E9;
+}
+
+.cell[data-speed] {
+    background-color: #EEBFB0;
 }
 
 /* Style for bullets */
@@ -141,7 +146,8 @@ body {
 }
 
 .cell[data-noisetype] {
-    color: #F1491D;  /* N characters in orange */
+    color: #F1491D;
+    background-color: #EEBFB0;
 }
 
 .cell[data-noisetype]::before:hover {
@@ -169,7 +175,8 @@ body {
 
 /* Add styles for deflector */
 .cell[data-deflect] {
-    color: #F1CA1D; /* Yellow color for deflector */
+    color: #F1CA1D;
+    background-color: #EEE1B0;
 }
 
 .cell[data-deflect]::after {
@@ -194,21 +201,21 @@ body {
 
 /* Add these animation definitions */
 @keyframes hitT {
-    0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(86, 29, 241, 0.2); } /* Purple for T */
-    100% { background-color: #EDEAE6; }
+    0% { background-color: #EEBFB0; }
+    50% { background-color: rgba(241, 73, 29, 0.4); }
+    100% { background-color: #EEBFB0; }
 }
 
 @keyframes hitN {
-    0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(241, 73, 29, 0.2); } /* Orange for N */
-    100% { background-color: #EDEAE6; }
+    0% { background-color: #EEBFB0; }
+    50% { background-color: rgba(241, 73, 29, 0.5); }
+    100% { background-color: #EEBFB0; }
 }
 
 @keyframes hitD {
-    0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(241, 202, 29, 0.2); } /* Yellow for D */
-    100% { background-color: #EDEAE6; }
+    0% { background-color: #EEE1B0; }
+    50% { background-color: rgba(241, 202, 29, 0.6); }
+    100% { background-color: #EEE1B0; }
 }
 
 .hit-t {
@@ -225,7 +232,8 @@ body {
 
 /* Add styles for gate */
 .cell[data-gate] {
-    color: #561DF1; /* Purple color for gate */
+    color: #561DF1;
+    background-color: #C4B3E9;
 }
 
 .cell[data-gate]::before {
@@ -388,9 +396,9 @@ body {
 
 /* Shooting animation */
 @keyframes shoot {
-    0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(241, 73, 29, 0.2); }
-    100% { background-color: #EDEAE6; }
+    0% { background-color: #EEBFB0; }
+    50% { background-color: rgba(241, 73, 29, 0.5); }
+    100% { background-color: #EEBFB0; }
 }
 
 .shooting {
@@ -401,6 +409,7 @@ body {
 /* Sample object styles */
 .cell[data-sample] {
     color: #F1CA1D;
+    background-color: #EEE1B0;
 }
 
 .cell[data-sample]::before {
@@ -442,13 +451,14 @@ body {
 
 /* Add styles for splitter */
 .cell[data-splitter] {
-    color: #561DF1;  /* Using purple for splitter */
+    color: #561DF1;
+    background-color: #C4B3E9;
 }
 
 @keyframes hitX {
-    0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(86, 29, 241, 0.2); }
-    100% { background-color: #EDEAE6; }
+    0% { background-color: #C4B3E9; }
+    50% { background-color: rgba(86, 29, 241, 0.5); }
+    100% { background-color: #C4B3E9; }
 }
 
 .hit-x {
@@ -456,9 +466,9 @@ body {
 }
 
 @keyframes hitA {
-    0%   { background-color: #EDEAE6; }
-    50%  { background-color: rgba(241, 202, 29, 0.2); }
-    100% { background-color: #EDEAE6; }
+    0%   { background-color: #EEE1B0; }
+    50%  { background-color: rgba(241, 202, 29, 0.6); }
+    100% { background-color: #EEE1B0; }
 }
 
 .hit-a {
