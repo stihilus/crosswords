@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Handle tone objects
             if (newCell.textContent === 'M') {
                 hitsToneThisFrame.push(newCell);
-                flashClass(newCell, 'hit-t');
+                flashClass(newCell, 'hit-m');
             }
             if (newCell.textContent === 'N') {
                 hitsToneThisFrame.push(newCell);

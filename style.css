@@ -246,12 +246,32 @@ body {
 /* Add gate hit animation */
 @keyframes hitG {
     0% { background-color: #EDEAE6; }
-    50% { background-color: rgba(86, 29, 241, 0.2); } /* Purple for G */
+    50% { background-color: #C4B3E9; }
     100% { background-color: #EDEAE6; }
 }
 
 .hit-g {
     animation: hitG 0.2s ease-out;
+}
+
+@keyframes hitM {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: #C4B3E9; }
+    100% { background-color: #EDEAE6; }
+}
+
+.hit-m {
+    animation: hitM 0.2s ease-out;
+}
+
+@keyframes hitS {
+    0% { background-color: #EDEAE6; }
+    50% { background-color: #EEE1B0; }
+    100% { background-color: #EDEAE6; }
+}
+
+.hit-s {
+    animation: hitS 0.2s ease-out;
 }
 
 #info-button {
