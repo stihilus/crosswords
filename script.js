@@ -849,9 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hasContent) {
             cellPopup.appendChild(makePopupBtn('copy', null, () => { copyCellData(cell); hideCellPopup(); }));
             if (cell.textContent === 'M') {
-                const scaleCode = cell.dataset.scale || 'free';
-                const scaleDef  = SCALES.find(s => s.code === scaleCode) || SCALES[0];
-                cellPopup.appendChild(makePopupBtn(`↓ ${scaleDef.label}`, 'accent', () => showScalePopup(cell)));
+                cellPopup.appendChild(makePopupBtn('scale', 'accent', () => showScalePopup(cell)));
             }
             cellPopup.appendChild(makePopupBtn('del', 'danger', () => { clearCell(cell); updateURL(); hideCellPopup(); }));
         } else if (clipboard) {
@@ -867,9 +865,10 @@ document.addEventListener('DOMContentLoaded', () => {
         cellPopup.innerHTML = '';
         cellPopup.appendChild(makePopupBtn('←', null, () => showCellPopup(cell)));
         const scaleCode = cell.dataset.scale || 'free';
-        SCALES.forEach(s => {
-            cellPopup.appendChild(makePopupBtn(s.label, s.code === scaleCode ? 'active' : null, () => {
-                applyScale(cell, s.code);
+        SCALES.filter(s => s.code !== 'free').forEach(s => {
+            const isActive = s.code === scaleCode;
+            cellPopup.appendChild(makePopupBtn(s.label, isActive ? 'active' : null, () => {
+                applyScale(cell, isActive ? 'free' : s.code);
                 hideCellPopup();
             }));
         });
