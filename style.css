@@ -527,6 +527,11 @@ body {
     background: rgba(86, 29, 241, 0.15);
 }
 
+.popup-btn.active {
+    background: #282727;
+    color: #EDEAE6;
+}
+
 /* Drag and drop */
 .cell.dragging {
     opacity: 0.25;

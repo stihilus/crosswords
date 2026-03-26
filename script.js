@@ -22,6 +22,35 @@ document.addEventListener('DOMContentLoaded', () => {
         'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5'
     ];
 
+    const SCALES = [
+        { code: 'free',   label: 'free',    notes: null },
+        { code: 'major',  label: 'major',   notes: ['C','D','E','F','G','A','B'] },
+        { code: 'minor',  label: 'minor',   notes: ['A','B','C','D','E','F','G'] },
+        { code: 'cpenta', label: 'C penta', notes: ['C','D','E','G','A'] },
+        { code: 'gpenta', label: 'G penta', notes: ['G','A','B','D','E'] },
+        { code: 'fpenta', label: 'F penta', notes: ['F','G','A','C','D'] },
+    ];
+
+    function getScaleTones(scaleCode) {
+        const scale = SCALES.find(s => s.code === scaleCode);
+        if (!scale || !scale.notes) return TONES;
+        return TONES.filter(t => scale.notes.includes(t.replace(/\d/g, '')));
+    }
+
+    function applyScale(cell, scaleCode) {
+        if (scaleCode === 'free') {
+            cell.removeAttribute('data-scale');
+        } else {
+            cell.dataset.scale = scaleCode;
+            const available = getScaleTones(scaleCode);
+            if (!available.includes(cell.dataset.tone)) {
+                cell.dataset.tone = available[0] || 'C4';
+                cell.title = cell.dataset.tone;
+            }
+        }
+        updateURL();
+    }
+
     const OSCILLATOR_TYPES = [
         { code: 'si', type: 'sine' },
         { code: 'sq', type: 'square' },
@@ -206,8 +235,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateURL();
                 return;
             } else if (isRightCornerClick) {
-                const currentIndex = TONES.indexOf(cell.dataset.tone || 'C4');
-                const nextTone = TONES[(currentIndex + 1) % TONES.length];
+                const scaleTones  = getScaleTones(cell.dataset.scale || 'free');
+                const currentIndex = scaleTones.indexOf(cell.dataset.tone || 'C4');
+                const nextTone = scaleTones[(currentIndex + 1) % scaleTones.length];
                 cell.dataset.tone = nextTone;
                 cell.title = nextTone;
                 const oscType = OSCILLATOR_TYPES.find(o => o.code === (cell.dataset.oscillator || 'si')).type;
@@ -446,7 +476,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let code = pos + cell.textContent;
             switch (cell.textContent) {
                 case 'T': code += (cell.dataset.speed || 'n') + (cell.dataset.direction || 'e'); break;
-                case 'M': code += (cell.dataset.oscillator || 'si') + (cell.dataset.tone || 'C4'); break;
+                case 'M':
+                    code += (cell.dataset.oscillator || 'si') + (cell.dataset.tone || 'C4');
+                    if (cell.dataset.scale) code += '~' + cell.dataset.scale;
+                    break;
                 case 'N': code += (cell.dataset.noisetype || 'kd'); break;
                 case 'D': code += (cell.dataset.deflect || 'e'); break;
                 case 'G': code += (cell.dataset.gate || '1'); break;
@@ -502,10 +535,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         speedCode: code[4]
                     });
                     break;
-                case 'M':
+                case 'M': {
                     cell.dataset.oscillator = code.slice(4, 6);
-                    cell.dataset.tone       = code.slice(6);
+                    const toneStr = code.slice(6);
+                    const sep = toneStr.indexOf('~');
+                    cell.dataset.tone = sep === -1 ? toneStr : toneStr.slice(0, sep);
+                    if (sep !== -1) cell.dataset.scale = toneStr.slice(sep + 1);
                     break;
+                }
                 case 'N':
                     cell.dataset.noisetype = code.slice(4);
                     break;
@@ -599,7 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cell.classList.remove('busy');
         ['data-direction','data-speed','data-tone','data-oscillator',
          'data-noisetype','data-deflect','data-gate','data-bulletCount',
-         'data-sample','data-splitter','title'].forEach(attr => cell.removeAttribute(attr));
+         'data-sample','data-splitter','data-scale','title'].forEach(attr => cell.removeAttribute(attr));
 
         cell.dataset.x = x;
         cell.dataset.y = y;
@@ -764,7 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Clipboard + popup ---
     let clipboard = null;
     const CELL_ATTRS = ['direction', 'speed', 'tone', 'oscillator',
-                        'noisetype', 'deflect', 'gate', 'sample', 'splitter'];
+                        'noisetype', 'deflect', 'gate', 'sample', 'splitter', 'scale'];
 
     const cellPopup = document.createElement('div');
     cellPopup.id = 'cell-popup';
@@ -774,7 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.createElement('button');
         btn.className = 'popup-btn' + (variant ? ' ' + variant : '');
         btn.textContent = label;
-        btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+        btn.addEventListener('click', (e) => { e.stopPropagation(); if (onClick) onClick(); });
         return btn;
     }
 
@@ -810,25 +847,36 @@ document.addEventListener('DOMContentLoaded', () => {
         cellPopup.innerHTML = '';
 
         if (hasContent) {
-            cellPopup.appendChild(makePopupBtn('copy', null, () => {
-                copyCellData(cell);
-                hideCellPopup();
-            }));
-            cellPopup.appendChild(makePopupBtn('del', 'danger', () => {
-                clearCell(cell);
-                updateURL();
-                hideCellPopup();
-            }));
+            cellPopup.appendChild(makePopupBtn('copy', null, () => { copyCellData(cell); hideCellPopup(); }));
+            if (cell.textContent === 'M') {
+                const scaleCode = cell.dataset.scale || 'free';
+                const scaleDef  = SCALES.find(s => s.code === scaleCode) || SCALES[0];
+                cellPopup.appendChild(makePopupBtn(`↓ ${scaleDef.label}`, 'accent', () => showScalePopup(cell)));
+            }
+            cellPopup.appendChild(makePopupBtn('del', 'danger', () => { clearCell(cell); updateURL(); hideCellPopup(); }));
         } else if (clipboard) {
-            cellPopup.appendChild(makePopupBtn('paste', 'accent', () => {
-                pasteCellData(cell);
-                hideCellPopup();
-            }));
+            cellPopup.appendChild(makePopupBtn('paste', 'accent', () => { pasteCellData(cell); hideCellPopup(); }));
         } else {
             return;
         }
 
-        // Measure then position above the cell (flip below if near top)
+        positionCellPopup(cell);
+    }
+
+    function showScalePopup(cell) {
+        cellPopup.innerHTML = '';
+        cellPopup.appendChild(makePopupBtn('←', null, () => showCellPopup(cell)));
+        const scaleCode = cell.dataset.scale || 'free';
+        SCALES.forEach(s => {
+            cellPopup.appendChild(makePopupBtn(s.label, s.code === scaleCode ? 'active' : null, () => {
+                applyScale(cell, s.code);
+                hideCellPopup();
+            }));
+        });
+        positionCellPopup(cell);
+    }
+
+    function positionCellPopup(cell) {
         cellPopup.style.visibility = 'hidden';
         cellPopup.classList.add('visible');
         const pw = cellPopup.offsetWidth;
