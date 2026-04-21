@@ -26,6 +26,9 @@ body {
     height: fit-content;
     background-color: #282727;
     padding: 2px;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .cell {

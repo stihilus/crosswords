@@ -855,11 +855,114 @@ document.addEventListener('DOMContentLoaded', () => {
         updateURL();
     }
 
+    function addCycleBtn(getLabel, onCycle, title) {
+        const btn = makePopupBtn(getLabel(), null, () => {
+            onCycle();
+            btn.textContent = getLabel();
+        });
+        btn.title = title;
+        cellPopup.appendChild(btn);
+    }
+
+    function appendCycleBtns(cell) {
+        const t = cell.textContent;
+        if (t === 'T') {
+            const shooter = shooters.find(s => s.x === parseInt(cell.dataset.x) && s.y === parseInt(cell.dataset.y));
+            addCycleBtn(
+                () => cell.dataset.speed || 'n',
+                () => {
+                    const i = SHOOT_SPEEDS.findIndex(s => s.code === (cell.dataset.speed || 'n'));
+                    const next = SHOOT_SPEEDS[(i + 1) % SHOOT_SPEEDS.length];
+                    cell.dataset.speed = next.code;
+                    if (shooter) shooter.speedCode = next.code;
+                    updateURL();
+                },
+                'speed'
+            );
+            const dirs = Object.values(DIRECTIONS);
+            addCycleBtn(
+                () => cell.dataset.direction || 'e',
+                () => {
+                    const i = dirs.findIndex(d => d.name === (cell.dataset.direction || 'e'));
+                    const next = dirs[(i + 1) % dirs.length];
+                    cell.dataset.direction = next.name;
+                    if (shooter) shooter.direction = next;
+                    updateURL();
+                },
+                'direction'
+            );
+        } else if (t === 'M') {
+            addCycleBtn(
+                () => cell.dataset.oscillator || 'si',
+                () => {
+                    const i = OSCILLATOR_TYPES.findIndex(o => o.code === (cell.dataset.oscillator || 'si'));
+                    cell.dataset.oscillator = OSCILLATOR_TYPES[(i + 1) % OSCILLATOR_TYPES.length].code;
+                    updateURL();
+                },
+                'wave'
+            );
+            addCycleBtn(
+                () => cell.dataset.tone || 'C4',
+                () => {
+                    const tones = getScaleTones(cell.dataset.scale || 'free');
+                    const i = tones.indexOf(cell.dataset.tone || 'C4');
+                    const next = tones[(i + 1) % tones.length];
+                    cell.dataset.tone = next;
+                    cell.title = next;
+                    updateURL();
+                },
+                'note'
+            );
+        } else if (t === 'N') {
+            addCycleBtn(
+                () => cell.dataset.noisetype || 'kd',
+                () => {
+                    const i = NOISE_TYPES.findIndex(n => n.code === (cell.dataset.noisetype || 'kd'));
+                    cell.dataset.noisetype = NOISE_TYPES[(i + 1) % NOISE_TYPES.length].code;
+                    updateURL();
+                },
+                'drum'
+            );
+        } else if (t === 'D') {
+            const dirs = Object.values(DIRECTIONS);
+            addCycleBtn(
+                () => cell.dataset.deflect || 'e',
+                () => {
+                    const i = dirs.findIndex(d => d.name === (cell.dataset.deflect || 'e'));
+                    cell.dataset.deflect = dirs[(i + 1) % dirs.length].name;
+                    updateURL();
+                },
+                'direction'
+            );
+        } else if (t === 'G') {
+            addCycleBtn(
+                () => cell.dataset.gate || '1',
+                () => {
+                    const i = GATE_FILTERS.findIndex(g => g.code === (cell.dataset.gate || '1'));
+                    cell.dataset.gate = GATE_FILTERS[(i + 1) % GATE_FILTERS.length].code;
+                    updateURL();
+                },
+                'mode'
+            );
+        } else if (t === 'S') {
+            addCycleBtn(
+                () => cell.dataset.sample || '01',
+                () => {
+                    const i = AUDIO_SAMPLES.findIndex(s => s.code === (cell.dataset.sample || '01'));
+                    cell.dataset.sample = AUDIO_SAMPLES[(i + 1) % AUDIO_SAMPLES.length].code;
+                    updateURL();
+                },
+                'sample'
+            );
+        }
+    }
+
     function showCellPopup(cell) {
         const hasContent = cell.textContent && cell.textContent !== '·';
         cellPopup.innerHTML = '';
 
         if (hasContent) {
+            appendCycleBtns(cell);
             cellPopup.appendChild(makePopupBtn('copy', null, () => { copyCellData(cell); hideCellPopup(); }));
             if (cell.textContent === 'M') {
                 cellPopup.appendChild(makePopupBtn('scale', 'accent', () => showScalePopup(cell)));
@@ -921,7 +1024,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Dismiss popup when clicking outside of it
-    document.addEventListener('mousedown', (e) => {
+    document.addEventListener('pointerdown', (e) => {
         if (!cellPopup.contains(e.target)) hideCellPopup();
     });
 
@@ -957,15 +1060,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ghost.id = 'drag-ghost';
     document.body.appendChild(ghost);
 
-    grid.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
+    grid.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
         const cell = e.target.closest('.cell');
         if (!cell || !cell.textContent || cell.textContent === '·') return;
-        dragState = { cell, startX: e.clientX, startY: e.clientY, active: false, dropTarget: null };
+        dragState = { cell, startX: e.clientX, startY: e.clientY, active: false, dropTarget: null, pointerId: e.pointerId };
     });
 
-    document.addEventListener('mousemove', (e) => {
-        if (!dragState) return;
+    document.addEventListener('pointermove', (e) => {
+        if (!dragState || (dragState.pointerId !== undefined && e.pointerId !== dragState.pointerId)) return;
         const dx = e.clientX - dragState.startX;
         const dy = e.clientY - dragState.startY;
 
@@ -1002,8 +1105,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.addEventListener('mouseup', (e) => {
-        if (!dragState) return;
+    document.addEventListener('pointerup', (e) => {
+        if (!dragState || (dragState.pointerId !== undefined && e.pointerId !== dragState.pointerId)) return;
 
         if (dragState.active) {
             skipNextClick = true;
