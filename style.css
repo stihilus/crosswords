@@ -532,6 +532,20 @@ body {
     color: #EDEAE6;
 }
 
+.popup-btn.op {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    padding: 0;
+    font-size: calc(var(--cell-size) * 0.5);
+    text-transform: none;
+    letter-spacing: 0;
+    background-color: #EDEAE6;
+}
+
+.popup-btn.op:hover {
+    background: rgba(40, 39, 39, 0.12);
+}
+
 /* Drag and drop */
 .cell.dragging {
     opacity: 0.25;

@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     delay.wet.value = 1;
     delay.toDestination();
 
-    const reverbSend = new Tone.Gain(0);
+    const reverbSend = new Tone.Gain(0.5);
     reverbSend.connect(reverb);
     const delaySend = new Tone.Gain(0);
     delaySend.connect(delay);
@@ -568,47 +568,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    const OPERATORS = ['T', 'M', 'N', 'D', 'G', 'S', 'X'];
+    const OPERATOR_NAMES = {
+        T: 'Trigger', M: 'Melody', N: 'Noise', D: 'Deflector',
+        G: 'Gate', S: 'Sample', X: 'Splitter'
+    };
+
+    function placeOperator(cell, char) {
+        if (!cell || cell.classList.contains('busy')) return;
+        if (!OPERATORS.includes(char)) return;
+
+        if (char === 'T') {
+            shooters.push({
+                x: parseInt(cell.dataset.x),
+                y: parseInt(cell.dataset.y),
+                direction: DIRECTIONS.e,
+                speedCode: 'n'
+            });
+            cell.textContent = 'T';
+            cell.dataset.direction = 'e';
+            cell.dataset.speed = 'n';
+        } else if (char === 'M') {
+            cell.textContent = 'M';
+            cell.dataset.tone = 'C4';
+            cell.dataset.oscillator = 'si';
+            cell.title = 'C4';
+        } else if (char === 'N') {
+            cell.textContent = 'N';
+            cell.dataset.noisetype = 'kd';
+            cell.removeAttribute('data-tone');
+            cell.removeAttribute('data-oscillator');
+        } else if (char === 'D') {
+            cell.textContent = 'D';
+            cell.dataset.deflect = 'e';
+        } else if (char === 'G') {
+            cell.textContent = 'G';
+            cell.dataset.gate = '1';
+            cell.dataset.bulletCount = '0';
+        } else if (char === 'S') {
+            cell.textContent = 'S';
+            cell.dataset.sample = '01';
+        } else if (char === 'X') {
+            cell.textContent = 'X';
+            cell.dataset.splitter = 'x';
+        }
+    }
+
     // --- Keyboard input ---
     document.addEventListener('keypress', (e) => {
         if (!selectedCell) return;
         if (selectedCell.classList.contains('busy')) return;
         const char = String.fromCharCode(e.keyCode).toUpperCase();
+        if (!OPERATORS.includes(char)) return;
 
-        if (char === 'T') {
-            shooters.push({
-                x: parseInt(selectedCell.dataset.x),
-                y: parseInt(selectedCell.dataset.y),
-                direction: DIRECTIONS.e,
-                speedCode: 'n'
-            });
-            selectedCell.textContent    = 'T';
-            selectedCell.dataset.direction = 'e';
-            selectedCell.dataset.speed     = 'n';
-        } else if (char === 'M') {
-            selectedCell.textContent       = 'M';
-            selectedCell.dataset.tone      = 'C4';
-            selectedCell.dataset.oscillator = 'si';
-            selectedCell.title             = 'C4';
-        } else if (char === 'N') {
-            selectedCell.textContent = 'N';
-            selectedCell.dataset.noisetype = 'kd';
-            selectedCell.removeAttribute('data-tone');
-            selectedCell.removeAttribute('data-oscillator');
-        } else if (char === 'D') {
-            selectedCell.textContent    = 'D';
-            selectedCell.dataset.deflect = 'e';
-        } else if (char === 'G') {
-            selectedCell.textContent        = 'G';
-            selectedCell.dataset.gate       = '1';
-            selectedCell.dataset.bulletCount = '0';
-        } else if (char === 'S') {
-            selectedCell.textContent     = 'S';
-            selectedCell.dataset.sample  = '01';
-        } else if (char === 'X') {
-            selectedCell.textContent      = 'X';
-            selectedCell.dataset.splitter = 'x';
-        }
-
+        placeOperator(selectedCell, char);
         selectedCell.classList.remove('selected');
         selectedCell = null;
         hideCellPopup();
@@ -735,7 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Settings: effects toggles ---
-    let reverbOn = false;
+    let reverbOn = true;
     const reverbToggle = document.getElementById('reverb-toggle');
     reverbToggle.addEventListener('click', () => {
         reverbOn = !reverbOn;
@@ -852,10 +865,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 cellPopup.appendChild(makePopupBtn('scale', 'accent', () => showScalePopup(cell)));
             }
             cellPopup.appendChild(makePopupBtn('del', 'danger', () => { clearCell(cell); updateURL(); hideCellPopup(); }));
-        } else if (clipboard) {
-            cellPopup.appendChild(makePopupBtn('paste', 'accent', () => { pasteCellData(cell); hideCellPopup(); }));
-        } else {
+        } else if (cell.classList.contains('busy')) {
             return;
+        } else {
+            OPERATORS.forEach(op => {
+                const btn = makePopupBtn(op, 'op', () => {
+                    placeOperator(cell, op);
+                    if (selectedCell) selectedCell.classList.remove('selected');
+                    selectedCell = null;
+                    updateURL();
+                    hideCellPopup();
+                });
+                btn.title = OPERATOR_NAMES[op];
+                cellPopup.appendChild(btn);
+            });
+            if (clipboard) {
+                cellPopup.appendChild(makePopupBtn('paste', 'accent', () => { pasteCellData(cell); hideCellPopup(); }));
+            }
         }
 
         positionCellPopup(cell);
