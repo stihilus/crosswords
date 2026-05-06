@@ -1,4 +1,4 @@
-# Crossword
+# Crosswords
 
 <img width="915" alt="image" src="https://github.com/user-attachments/assets/4d0e25b1-e933-4792-83ab-73e1841f0a1c">
 
@@ -33,7 +33,7 @@ https://stihilus.github.io/crosswords/
 
 ### S - Sample
 - Plays audio sample when hit by bullet
-- Sample options: 01, 02, 03
+- Sample options: 01–12 (kicks, snares, claps, hats, percussion, bass)
 
 ### X - Splitter
 - Creates additional bullets perpendicular to incoming bullet direction
