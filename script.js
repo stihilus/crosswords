@@ -101,9 +101,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const AUDIO_SAMPLES = [
-        { code: '01', file: '01.wav' },
-        { code: '02', file: '02.wav' },
-        { code: '03', file: '03.wav' }
+        { code: '01', file: 'OT_Kick7.wav' },
+        { code: '02', file: 'OT_Kick9.wav' },
+        { code: '03', file: 'OT_Snare3.wav' },
+        { code: '04', file: 'OT_Snare4.wav' },
+        { code: '05', file: 'OT_Clap2.wav' },
+        { code: '06', file: 'OT_Hat1.wav' },
+        { code: '07', file: 'OT_Hat5.wav' },
+        { code: '08', file: 'OT_Perc3.wav' },
+        { code: '09', file: 'OT_Perc4.wav' },
+        { code: '10', file: 'OT_Perc12.wav' },
+        { code: '11', file: 'OT_Bass_E_5.wav' },
+        { code: '12', file: 'OT_Bass_Eb_8.wav' }
     ];
 
     // --- Global FX sends (parallel reverb + delay) ---
